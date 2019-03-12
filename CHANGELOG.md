@@ -4,6 +4,168 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [0.5.1] - 2019-03-11
+### Added
+ - Withdrawal limits
+
+### Updated
+ - Add optional paramater phase to das33 queries
+ - Adjusted Alliance pay price calculation
+ - Cli Wallet: we can now load a node's TLS certificate or we can ignore the
+ check of its issuer
+
+## [0.5.0] - 2019-01-06
+### Major overhaul and updates
+ - Ubuntu 18.04 LTS platform now supported and recommended
+ - Updated codebase with BitShares improvements
+
+### Added
+ - Introduced Product Packages to replace licenses
+ - Support ES_OBJECTS for Elastic Search plugin
+### Updated
+ - Das33 project object now contains reports as array of strings
+ - Implemented Das33 report updating through project update operation extensions
+ - ES plugin enhanced serialization to allow queries and aggregation over all data types
+
+## [0.4.6] - 2018-09-19
+### Added
+ - New operation: update external token price
+ - New operation: das33 set use market price for token
+ - New query: get last prices
+ - New query: get external prices
+ - Cli Wallet: new method submit cycles to queue by license
+ - Cli Wallet: new method das33 set use market token price
+ - Cli Wallet: new method update external token price
+ - Cli Wallet: new method get last prices
+ - Cli Wallet: new method get external prices
+ - New indices: last token price and external token price
+
+### Updated
+ - It is no longer possible to submit cycles from a chartered license to the
+   minting queue
+ - Utility licenses now have more upgrades
+
+## [0.4.5] - 2018-09-06
+### Added
+ - Hardfork: use correct Dascoin price in clearing contract
+ - New query: get amount of project tokens received for asset
+ - New query: get amount of asset needed for project token
+ - Reserved first 20 places in asset_id space for system assets
+
+### Updated
+ - Cli Wallet: performance of get_account_history_by_operation query is
+   vastly improved
+ - Allow wireout of BTC asset
+
+## [0.4.4] - 2018-08-31
+### Added
+ - Hardfork: key rollback removed
+ - BTC asset created
+ - New operation: update external BTC price
+ - New operation: use external BTC price or price from internal exchange
+ - New operation: distribute das33 project pledges
+ - New operation: reject das33 project
+ - New operation: distribute single das33 pledge
+ - New operation: reject single das33 pledge
+ - New query: get tethered accounts balances
+ - New query: get amount of assets pledged to a project
+ - Support for fees in other assets
+ - Cli Wallet: new method get account history by operation
+ - Cli Wallet: new method update external btc price
+
+### Updated
+ - Flags of DAS and WEBEUR assets are fixed
+ - Issuer of DAS asset is now webasset-issuer
+ - Transfer operation now obeys asset restrictions
+ - Restriction that last DAS cannot be spent is removed
+ - Changed internal das33 mechanics
+
+## [0.4.3] - 2018-08-03
+### Added
+ - New query: get limit orders collection grouped by price
+
+### Updated
+ - Updated upgrade behavior for utility licenses
+ - Fixed bug regarding websocket server not accepting connections after
+   firewall rules are changed.
+
+## [0.4.2] - 2018-07-11
+### Added
+ - New operation: update global parameters
+ - New query: get delayed operation for account
+ - Hardfork: new algorithm to calculate price in debit and credit operations
+
+### Updated
+ - Allow 0 amount in debit operation
+ - Allow purchasing cycles from all accoind kinds
+ - Cherry picked fixes for BitShares issue #411
+
+## [0.4.1] - 2018-06-27
+### Added
+
+### Updated
+ - Changed utility licences number of upgrades
+ - Changed number of cycles for Vice President Utility Licence
+
+## [0.4.0] - 2018-06-27
+### Added
+ - New operation: set daspay transaction ratio
+ - New operation: register daspay authority
+ - New operation: unregister daspay authority
+ - New operation: reserve asset on account
+ - New operation: unreserve asset on account
+ - New operation: create payment service provider
+ - New operation: update payment service provider
+ - New operation: delete payment service provider
+ - New operation: daspay debit account
+ - New operation: daspay credit account
+ - New operation: update daspay clearing parameters
+ - New operation: update delayed operations resolver parameters
+ - New operation: das33 pledge asset
+ - New operation: das33 project create
+ - New operation: das33 project update
+ - New operation: das33 project delete
+ - New operation: set chain authority
+ - Clearing smart contract
+ - Delayed operations resolver smart contract
+ - New license kind: utility
+ - New authorities: daspay_administrator and das33_administrator
+ - New query: get total cycles
+ - New query: get daspay authority for account
+ - New query: get payment service providers
+ - New query: get das33 projects
+ - New query: get das33 pledges
+ - New query: get das33 pledges by account
+ - New query: get das33 pledges by project
+ - Cli Wallet: new method set daspay transaction ratio
+ - Cli Wallet: new methods to create, update and delete payment service provide
+ - Cli Wallet: new methods to register and unregister daspay authority
+ - Cli Wallet: new methods to reserve and unreserve asset on account
+ - Cli Wallet: new method daspay debit
+ - Cli Wallet: new method daspay credit
+ - Cli Wallet: new method update clearing parameters
+ - Cli Wallet: new method update delayed operations resolver parameters
+ - Cli Wallet: new method get daspay authority for account
+ - Cli Wallet: new method das33 pledge asset
+ - Cli Wallet: new method get das33 pledges
+ - Cli Wallet: new method get das33 pledges by account
+ - Cli Wallet: new method get das33 pledges by project
+ - Cli Wallet: new methods to create, update and delete project
+ - Cli Wallet: new method get das33 projects
+
+### Updated
+ - License upgrade system updated to handle utility licences
+
+## [0.3.2] - 2018-05-31
+### Added
+ - New operations: roll back public key, set enable rollback
+ - New operation: submit cycles from pool account
+ - Hardfork: removed operations which were erroneously sent to live net
+
+## [0.3.1] - 2018-04-24
+### Updated
+ - Hardfork: fixed timestamp
+
 ## [0.3.0] - 2018-04-24
 ### Added
  - New fee implementation
