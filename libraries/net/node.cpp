@@ -82,6 +82,7 @@
 #include <graphene/chain/protocol/fee_schedule.hpp>
 
 #include <fc/git_revision.hpp>
+#include <graphene/utilities/git_revision.hpp>
 
 //#define ENABLE_DEBUG_ULOGS
 
@@ -1334,6 +1335,8 @@ namespace graphene { namespace net { namespace detail {
       // settle on what we really want in there, we'll likely promote them to first
       // class fields in the hello message
       fc::mutable_variant_object user_data;
+      user_data["graphene_git_revision_sha"] = graphene::utilities::git_revision_sha;
+      user_data["graphene_git_revision_unix_timestamp"] = graphene::utilities::git_revision_unix_timestamp;
       user_data["fc_git_revision_sha"] = fc::git_revision_sha;
       user_data["fc_git_revision_unix_timestamp"] = fc::git_revision_unix_timestamp;
 #if defined( __APPLE__ )
@@ -4385,6 +4388,27 @@ namespace graphene { namespace net { namespace detail {
         peer_details["banscore"] = "";
         peer_details["syncnode"] = "";
 
+        if (peer->graphene_git_revision_sha)
+        {
+          if (*peer->graphene_git_revision_sha == graphene::utilities::git_revision_sha)
+            peer_details["graphene_git_revision_sha"] = std::string(*peer->graphene_git_revision_sha + " (same as ours)");
+          else
+            peer_details["graphene_git_revision_sha"] = std::string(*peer->graphene_git_revision_sha + " (different from ours)");
+        }
+
+        if (peer->graphene_git_revision_unix_timestamp)
+        {
+          peer_details["graphene_git_revision_unix_timestamp"] = *peer->graphene_git_revision_unix_timestamp;
+          std::string age_string = fc::get_approximate_relative_time_string( *peer->graphene_git_revision_unix_timestamp);
+          if (*peer->graphene_git_revision_unix_timestamp == fc::time_point_sec(graphene::utilities::git_revision_unix_timestamp))
+            age_string += " (same as ours)";
+          else if (*peer->graphene_git_revision_unix_timestamp > fc::time_point_sec(graphene::utilities::git_revision_unix_timestamp))
+            age_string += " (newer than ours)";
+          else
+            age_string += " (older than ours)";
+          peer_details["graphene_revision_age"] = age_string;
+        }
+
         if (peer->fc_git_revision_sha)
         {
           std::string revision_string = *peer->fc_git_revision_sha;
@@ -4395,6 +4419,7 @@ namespace graphene { namespace net { namespace detail {
           peer_details["fc_git_revision_sha"] = revision_string;
 
         }
+
         if (peer->fc_git_revision_unix_timestamp)
         {
           peer_details["fc_git_revision_unix_timestamp"] = *peer->fc_git_revision_unix_timestamp;
