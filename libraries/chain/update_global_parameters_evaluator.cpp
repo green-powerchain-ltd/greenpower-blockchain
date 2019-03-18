@@ -22,7 +22,6 @@
  * SOFTWARE.
  */
 
-#include <fc/smart_ref_impl.hpp>
 #include <graphene/chain/database.hpp>
 #include <graphene/chain/update_global_parameters_evaluator.hpp>
 #include <graphene/chain/withdrawal_limit_object.hpp>

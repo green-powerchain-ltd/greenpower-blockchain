@@ -35,7 +35,6 @@
 #include <graphene/chain/market_evaluator.hpp>
 #include <graphene/chain/protocol/fee_schedule.hpp>
 
-#include <fc/smart_ref_impl.hpp>
 #include <fc/uint128.hpp>
 
 namespace graphene { namespace chain {

@@ -5,8 +5,6 @@
 #include <graphene/chain/queue_objects.hpp>
 #include <graphene/chain/issued_asset_record_object.hpp>
 
-#include <fc/smart_ref_impl.hpp>
-
 namespace graphene {
 namespace chain {
 
