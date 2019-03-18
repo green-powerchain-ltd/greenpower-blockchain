@@ -317,6 +317,11 @@ class database_api
        */
       optional<total_cycles_res> get_total_cycles() const;
 
+      /**
+       * @brief Get the amounts of cycles on different licenses in the system
+       */
+      optional<queue_projection_res> get_queue_projection() const;
+
       //////////
       // Keys //
       //////////
@@ -998,6 +1003,14 @@ class database_api
       vector<asset> get_amount_of_assets_pledged_to_project(das33_project_id_type project) const;
 
       /**
+       * @brief Gets a sum of all pledges made to project
+       * @params project id of a project
+       * @params phase number of phase
+       * @return vector of assets, each with total sum of that asset pledged
+      */
+      vector<asset> get_amount_of_assets_pledged_to_project_in_phase(das33_project_id_type project, uint32_t phase) const;
+
+      /**
        * @brief Gets the amount of project tokens that a pledger can get for pledging a certain amount of asset
        * @params project id of a project
        * @params to_pledge asset user is pledging
@@ -1075,6 +1088,7 @@ FC_API( graphene::app::database_api,
    (get_chain_id)
    (get_dynamic_global_properties)
    (get_total_cycles)
+   (get_queue_projection)
 
    // Keys
    (get_key_references)
@@ -1203,6 +1217,7 @@ FC_API( graphene::app::database_api,
    (get_das33_pledges_by_project)
    (get_das33_projects)
    (get_amount_of_assets_pledged_to_project)
+   (get_amount_of_assets_pledged_to_project_in_phase)
    (get_amount_of_project_tokens_received_for_asset)
    (get_amount_of_asset_needed_for_project_token)
 

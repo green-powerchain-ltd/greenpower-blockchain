@@ -5880,6 +5880,11 @@ optional<total_cycles_res> wallet_api::get_total_cycles() const
     return my->_remote_db->get_total_cycles();
 }
 
+optional<queue_projection_res> wallet_api::get_queue_projection() const
+{
+    return my->_remote_db->get_queue_projection();
+}
+
 acc_id_share_t_res wallet_api::get_account_cycle_balance(const string& name_or_id) const
 {
    if( auto real_id = detail::maybe_id<account_id_type>(name_or_id) )
@@ -6181,6 +6186,11 @@ vector<das33_project_object> wallet_api::get_das33_projects(const string& lower_
 vector<asset> wallet_api::get_amount_of_assets_pledged_to_project(das33_project_id_type project) const
 {
   return my->_remote_db->get_amount_of_assets_pledged_to_project(project);
+}
+
+vector<asset> wallet_api::get_amount_of_assets_pledged_to_project_in_phase(das33_project_id_type project, uint32_t phase) const
+{
+    return my->_remote_db->get_amount_of_assets_pledged_to_project_in_phase(project, phase);
 }
 
 das33_project_tokens_amount wallet_api::get_amount_of_project_tokens_received_for_asset(das33_project_id_type project, asset to_pledge) const

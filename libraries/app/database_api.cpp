@@ -87,6 +87,7 @@ class database_api_impl : public std::enable_shared_from_this<database_api_impl>
       chain_id_type get_chain_id()const;
       dynamic_global_property_object get_dynamic_global_properties()const;
       optional<total_cycles_res> get_total_cycles() const;
+      optional<queue_projection_res> get_queue_projection() const;
 
       // Keys
       vector<vector<account_id_type>> get_key_references( vector<public_key_type> key )const;
@@ -207,6 +208,7 @@ class database_api_impl : public std::enable_shared_from_this<database_api_impl>
       vector<das33_pledge_holder_object> get_das33_pledges_by_project(das33_project_id_type project, das33_pledge_holder_id_type from, uint32_t limit, optional<uint32_t> phase) const;
       vector<das33_project_object> get_das33_projects(const string& lower_bound_name, uint32_t limit) const;
       vector<asset> get_amount_of_assets_pledged_to_project(das33_project_id_type project) const;
+      vector<asset> get_amount_of_assets_pledged_to_project_in_phase(das33_project_id_type project, uint32_t phase) const;
       das33_project_tokens_amount get_amount_of_project_tokens_received_for_asset(das33_project_id_type project, asset to_pledge) const;
       das33_project_tokens_amount get_amount_of_asset_needed_for_project_token(das33_project_id_type project, asset_id_type asset_id, asset tokens) const;
 
@@ -695,6 +697,28 @@ optional<total_cycles_res> database_api_impl::get_total_cycles() const {
             {
                 result.total_cycles += vaultCycles->total_cycles;
                 result.total_dascoin += vaultCycles->total_dascoin;
+            }
+        }
+    }
+    return result;
+}
+
+optional<queue_projection_res> database_api::get_queue_projection() const {
+    return my->get_queue_projection();
+}
+
+optional<queue_projection_res> database_api_impl::get_queue_projection() const {
+    queue_projection_res result;
+    const auto& accounts = _db.get_index_type<account_index>().indices().get<by_id>();
+
+    for (const account_object& acc : accounts)
+    {
+        if (acc.is_vault())
+        {
+            optional<queue_projection_res> vaultQueue = _dal.get_queue_state_for_account(acc.get_id());
+            if (vaultQueue.valid())
+            {
+                result = result + *vaultQueue;
             }
         }
     }
@@ -3101,6 +3125,38 @@ vector<asset> database_api_impl::get_amount_of_assets_pledged_to_project(das33_p
   }
 
   return result;
+}
+
+vector<asset> database_api::get_amount_of_assets_pledged_to_project_in_phase(das33_project_id_type project, uint32_t phase) const
+{
+    return my->get_amount_of_assets_pledged_to_project_in_phase(project, phase);
+}
+
+vector<asset> database_api_impl::get_amount_of_assets_pledged_to_project_in_phase(das33_project_id_type project, uint32_t phase) const
+{
+    vector<asset> result;
+    map<asset_id_type, int> index_map;
+
+    auto default_pledge_id = das33_pledge_holder_id_type();
+
+    const auto& pledges = _db.get_index_type<das33_pledge_holder_index>().indices().get<by_project>();
+    for( auto itr = pledges.lower_bound(project); itr != pledges.upper_bound(project); ++itr )
+    {
+        if (itr->id != default_pledge_id && itr->phase_number == phase)
+        {
+            if (index_map.find(itr->pledged.asset_id) != index_map.end())
+            {
+                result[index_map[itr->pledged.asset_id]] += itr->pledged;
+            }
+            else
+            {
+                index_map[itr->pledged.asset_id] = result.size();
+                result.emplace_back(itr->pledged);
+            }
+        }
+    }
+
+    return result;
 }
 
 das33_project_tokens_amount database_api::get_amount_of_project_tokens_received_for_asset(das33_project_id_type project, asset to_pledge) const

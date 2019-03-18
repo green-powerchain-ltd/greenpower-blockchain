@@ -1688,6 +1688,12 @@ class wallet_api
       optional<total_cycles_res> get_total_cycles() const;
 
       /**
+       * Gets amount of cycles held by different types of licenses
+       * @return an object containing breakdown of cycles in the system
+       */
+      optional<queue_projection_res> get_queue_projection() const;
+
+      /**
        * Get the amount of cycles in the account.
        * @param  account Account name or stringified id.
        * @return         Cycle balance of the account.
@@ -2181,6 +2187,14 @@ class wallet_api
       */
       vector<asset> get_amount_of_assets_pledged_to_project(das33_project_id_type project) const;
 
+    /**
+    * @brief Gets a sum of all pledges made to project in a round
+    * @params project id of a project
+    * @params phase number of phase
+    * @return vector of assets, each with total sum of that asset pledged
+    */
+    vector<asset> get_amount_of_assets_pledged_to_project_in_phase(das33_project_id_type project, uint32_t phase) const;
+
       /**
       * @brief Gets the amount of project tokens that a pledger can get for pledging a certain amount of asset
       * @param project id of a project
@@ -2550,6 +2564,7 @@ FC_API( graphene::wallet::wallet_api,
 
         // Cycles:
         (get_total_cycles)
+        (get_queue_projection)
         (get_account_cycle_balance)
         (get_full_cycle_balances)
         (get_dascoin_balance)
@@ -2589,6 +2604,7 @@ FC_API( graphene::wallet::wallet_api,
         (delete_das33_project)
         (get_das33_projects)
         (get_amount_of_assets_pledged_to_project)
+        (get_amount_of_assets_pledged_to_project_in_phase)
         (get_amount_of_project_tokens_received_for_asset)
         (get_amount_of_asset_needed_for_project_token)
         (das33_set_use_external_btc_price)
