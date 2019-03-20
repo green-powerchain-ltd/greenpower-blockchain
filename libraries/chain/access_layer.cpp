@@ -193,13 +193,16 @@ optional<queue_projection_res> database_access_layer::get_queue_state_for_accoun
                 if (lic.valid())
                 {
                   cycles_res tmp;
-                  if (lic->kind == license_kind::chartered  || (lic->kind == license_kind::locked_frequency && lic->up_policy == detail::policy::president))
+                  if (lic->kind == license_kind::chartered  || (lic->kind == license_kind::locked_frequency && lic->up_policy == detail::president))
                   {
-                      tmp.cycles = itr->amount * itr->balance_upgrade.multipliers[itr->balance_upgrade.used];
-                      tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
-                      result.auto_submit.charter = result.auto_submit.charter + tmp;
+                      if (itr->balance_upgrade.used < itr->balance_upgrade.max)
+                      {
+                        tmp.cycles = itr->amount * itr->balance_upgrade.multipliers[itr->balance_upgrade.used];
+                        tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
+                        result.auto_submit.charter = result.auto_submit.charter + tmp;
+                      }
                   }
-                  else if (lic->kind == license_kind::locked_frequency && lic->up_policy != detail::policy::president)
+                  else if (lic->kind == license_kind::locked_frequency && lic->up_policy != detail::president)
                   {
                       tmp.cycles = itr->amount;
                       tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
