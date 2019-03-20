@@ -189,12 +189,12 @@ struct adaptor_struct {
    {
       fc::mutable_variant_object o(op);
       vector<string> keys_to_rename;
-      for (auto i = o.begin(); i != o.end(); ++i)
+      for (auto& i : o)
       {
-         auto& element = (*i).value();
+         auto& element = i.value();
          if (element.is_object())
          {
-            const string& name = (*i).key();
+            const string& name = i.key();
             auto& vo = element.get_object();
             if (vo.contains(name.c_str()))
                keys_to_rename.emplace_back(name);
@@ -237,6 +237,10 @@ struct adaptor_struct {
             if (tmp2.find("current_fees") != tmp2.end())
             {
                tmp2.erase("current_fees");
+               if (tmp2.find("extensions") != tmp2.end())
+               {
+                  tmp2["extensions"] = fc::json::to_string(tmp2["extensions"]);
+               }
                o["new_parameters"] = tmp2;
             }
          }
