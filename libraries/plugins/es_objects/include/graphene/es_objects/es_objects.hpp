@@ -94,7 +94,11 @@ struct adaptor_struct {
       {
          o["operations"] = fc::json::to_string(o["operations"]);
       }
-      
+      if (o.find("upgrades") != o.end())
+      {
+         o["upgrades"] = fc::json::to_string(o["upgrades"]);
+      }
+
       return o;
    }
 

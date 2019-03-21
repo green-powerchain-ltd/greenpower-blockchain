@@ -21,7 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+#include <boost/algorithm/string/join.hpp>
 #include <graphene/es_objects/es_objects.hpp>
 #include <curl/curl.h>
 #include <graphene/chain/proposal_object.hpp>
@@ -59,6 +59,7 @@ class es_objects_plugin_impl
       bool _es_objects_balances = true;
       bool _es_objects_limit_orders = true;
       bool _es_objects_asset_bitasset = true;
+      bool _es_objects_licenses = true;
       std::string _es_objects_index_prefix = "objects-";
       uint32_t _es_objects_start_es_after_block = 0;
       CURL *curl; // curl handler
@@ -147,7 +148,16 @@ bool es_objects_plugin_impl::index_database( const vector<object_id_type>& ids, 
                else
                   prepareTemplate<asset_bitasset_data_object>(*ba, "bitasset");
             }
-         }
+         } else if (value.is<license_information_object>() && _es_objects_licenses) {
+           auto obj = db.find_object(value);
+           auto b = static_cast<const license_information_object *>(obj);
+           if (b != nullptr) {
+              if (action == "delete")
+                 remove_from_database(b->id, "license");
+              else
+                 prepareTemplate<license_information_object>(*b, "license");
+           }
+        }
       }
 
       if (curl && bulk.size() >= limit_documents) { // we are in bulk time, ready to add data to elasticsearech
@@ -157,6 +167,14 @@ bool es_objects_plugin_impl::index_database( const vector<object_id_type>& ids, 
          es.bulk_lines = bulk;
          es.elasticsearch_url = _es_objects_elasticsearch_url;
          es.auth = _es_objects_auth;
+
+         std::ofstream outfile;
+         outfile.open("es_bulk.json", std::ios_base::out);
+
+         auto bulking = boost::algorithm::join(bulk, "\n");
+         bulking = bulking + "\n";
+         outfile << bulking << "\n";
+
 
          if (!graphene::utilities::SendBulk(std::move(es)))
             return false;
@@ -252,6 +270,7 @@ void es_objects_plugin::plugin_set_program_options(
          ("es-objects-balances", boost::program_options::value<bool>(), "Store balances objects(true)")
          ("es-objects-limit-orders", boost::program_options::value<bool>(), "Store limit order objects(true)")
          ("es-objects-asset-bitasset", boost::program_options::value<bool>(), "Store feed data(true)")
+         ("es-objects-licenses", boost::program_options::value<bool>(), "Store licenses objects(true)")
          ("es-objects-index-prefix", boost::program_options::value<std::string>(), "Add a prefix to the index(objects-)")
          ("es-objects-keep-only-current", boost::program_options::value<bool>(), "Keep only current state of the objects(true)")
          ("es-objects-start-es-after-block", boost::program_options::value<uint32_t>(), "Start doing ES job after block(0)")
@@ -310,6 +329,9 @@ void es_objects_plugin::plugin_initialize(const boost::program_options::variable
    }
    if (options.count("es-objects-asset-bitasset")) {
       my->_es_objects_asset_bitasset = options["es-objects-asset-bitasset"].as<bool>();
+   }
+   if (options.count("es-objects-licenses")) {
+      my->_es_objects_licenses = options["es-objects-licenses"].as<bool>();
    }
    if (options.count("es-objects-index-prefix")) {
       my->_es_objects_index_prefix = options["es-objects-index-prefix"].as<std::string>();
