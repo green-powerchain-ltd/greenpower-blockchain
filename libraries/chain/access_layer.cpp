@@ -169,7 +169,7 @@ optional<total_cycles_res> database_access_layer::get_total_cycles(account_id_ty
 
                 result.total_cycles += itr->amount;
                 result.total_cycles += itr->non_upgradeable_amount;
-                result.total_dascoin += _db.cycles_to_dascoin(result.total_cycles, itr->frequency_lock); 
+                result.total_dascoin += _db.cycles_to_dascoin(itr->amount + itr->non_upgradeable_amount, itr->frequency_lock);
             }
             return result;
         }
@@ -200,6 +200,15 @@ optional<queue_projection_res> database_access_layer::get_queue_state_for_accoun
                         tmp.cycles = itr->amount * itr->balance_upgrade.multipliers[itr->balance_upgrade.used];
                         tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
                         result.auto_submit.charter = result.auto_submit.charter + tmp;
+                        auto upgrades = itr->balance_upgrade.used;
+                        tmp = cycles_res{0,0};
+                        while(upgrades < itr->balance_upgrade.max)
+                        {
+                            tmp.cycles += itr->amount * itr->balance_upgrade.multipliers[upgrades];
+                            upgrades++;
+                        }
+                        tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
+                        result.auto_submit.after_all_upgrades = result.auto_submit.after_all_upgrades + tmp;
                       }
                   }
                   else if (lic->kind == license_kind::locked_frequency && lic->up_policy != detail::president)
@@ -217,30 +226,73 @@ optional<queue_projection_res> database_access_layer::get_queue_state_for_accoun
                           else
                               result.next_upgrade_last_locked_manual_submit.untethered = result.next_upgrade_last_locked_manual_submit.untethered + tmp + tmp;
                       }
+                      if (itr->balance_upgrade.max > itr->balance_upgrade.used)
+                      {
+                          auto upgrades = itr->balance_upgrade.used;
+                          auto amount = itr->amount;
+                          while(upgrades < itr->balance_upgrade.max)
+                          {
+                              amount *= itr->balance_upgrade.multipliers[upgrades];
+                              upgrades++;
+                          }
+                          tmp.cycles = amount;
+                          tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
+                          result.after_all_upgrades_manual_submit = result.after_all_upgrades_manual_submit + tmp;
+                      }
+                      else
+                      {
+                          result.after_all_upgrades_manual_submit = result.after_all_upgrades_manual_submit + tmp;
+                      }
                   }
                   else if (lic->kind == license_kind::utility)
                   {
-                      tmp.cycles = itr->base_amount * itr->balance_upgrade.multipliers[itr->balance_upgrade.used];
-                      tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
-                      result.auto_submit.utility = result.auto_submit.utility + tmp;
+                      if (itr->balance_upgrade.used < itr->balance_upgrade.max)
+                      {
+                          tmp.cycles = itr->base_amount * itr->balance_upgrade.multipliers[itr->balance_upgrade.used];
+                          tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
+                          result.auto_submit.utility = result.auto_submit.utility + tmp;
+                          auto upgrades = itr->balance_upgrade.used;
+                          tmp.cycles = 0;
+                          while (upgrades < itr->balance_upgrade.max)
+                          {
+                            tmp.cycles += itr->base_amount * itr->balance_upgrade.multipliers[upgrades];
+                            upgrades++;
+                          }
+                          tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
+                          result.auto_submit.after_all_upgrades = result.auto_submit.after_all_upgrades + tmp;
+                      }
                       tmp.cycles = itr->amount;
                       tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
                       if (account->is_tethered())
                           result.utility_manual_submit.tethered = result.utility_manual_submit.tethered + tmp;
                       else
                           result.utility_manual_submit.untethered = result.utility_manual_submit.untethered + tmp;
+                      result.after_all_upgrades_manual_submit = result.after_all_upgrades_manual_submit + tmp;
                   }
                   else if (lic->kind == license_kind::package)
                   {
-                      tmp.cycles = itr->base_amount * itr->balance_upgrade.multipliers[itr->balance_upgrade.used];
-                      tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
-                      result.auto_submit.package = result.auto_submit.package + tmp;
+                      if (itr->balance_upgrade.used < itr->balance_upgrade.max)
+                      {
+                          tmp.cycles = itr->base_amount * itr->balance_upgrade.multipliers[itr->balance_upgrade.used];
+                          tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
+                          result.auto_submit.package = result.auto_submit.package + tmp;
+                          auto upgrades = itr->balance_upgrade.used;
+                          tmp.cycles = 0;
+                          while (upgrades < itr->balance_upgrade.max)
+                          {
+                            tmp.cycles += itr->base_amount * itr->balance_upgrade.multipliers[upgrades];
+                            upgrades++;
+                          }
+                          tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
+                          result.auto_submit.after_all_upgrades = result.auto_submit.after_all_upgrades + tmp;
+                      }
                       tmp.cycles = itr->amount;
                       tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
                       if (account->is_tethered())
                           result.package_manual_submit.tethered = result.package_manual_submit.tethered + tmp;
                       else
                           result.package_manual_submit.untethered = result.package_manual_submit.untethered + tmp;
+                      result.after_all_upgrades_manual_submit = result.after_all_upgrades_manual_submit + tmp;
                   }
                 }
             }
