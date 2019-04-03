@@ -193,7 +193,7 @@ optional<queue_projection_res> database_access_layer::get_queue_state_for_accoun
                 if (lic.valid())
                 {
                   cycles_res tmp;
-                  if (lic->kind == license_kind::chartered  || (lic->kind == license_kind::locked_frequency && lic->up_policy == detail::president))
+                  if (lic->kind == license_kind::chartered)//  || (lic->kind == license_kind::locked_frequency && lic->up_policy == detail::president))
                   {
                       if (itr->balance_upgrade.used < itr->balance_upgrade.max)
                       {
@@ -211,20 +211,24 @@ optional<queue_projection_res> database_access_layer::get_queue_state_for_accoun
                         result.auto_submit.after_all_upgrades = result.auto_submit.after_all_upgrades + tmp;
                       }
                   }
-                  else if (lic->kind == license_kind::locked_frequency && lic->up_policy != detail::president)
+                  else if (lic->kind == license_kind::locked_frequency)// && lic->up_policy != detail::president)
                   {
-                      tmp.cycles = itr->amount;
-                      tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
-                      if (account->is_tethered())
-                          result.total_locked_manual_submit.tethered = result.total_locked_manual_submit.tethered + tmp;
+                      if (lic->up_policy != detail::president)
+                          tmp.cycles = itr->amount;
                       else
-                          result.total_locked_manual_submit.untethered = result.total_locked_manual_submit.untethered + tmp;
+                          tmp.cycles = itr->base_amount + (itr->base_amount * itr->bonus_percent / 100);
+                      tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
+                      cycles_res non_upgradeable{itr->non_upgradeable_amount, _db.cycles_to_dascoin(itr->non_upgradeable_amount, itr->frequency_lock)};
+                      if (account->is_tethered())
+                          result.total_locked_manual_submit.tethered = result.total_locked_manual_submit.tethered + tmp + non_upgradeable;
+                      else
+                          result.total_locked_manual_submit.untethered = result.total_locked_manual_submit.untethered + tmp + non_upgradeable;
                       if (itr->balance_upgrade.max - itr->balance_upgrade.used == 1)
                       {
                           if (account->is_tethered())
-                              result.next_upgrade_last_locked_manual_submit.tethered = result.next_upgrade_last_locked_manual_submit.tethered + tmp + tmp;
+                              result.next_upgrade_last_locked_manual_submit.tethered = result.next_upgrade_last_locked_manual_submit.tethered + tmp + tmp + non_upgradeable;
                           else
-                              result.next_upgrade_last_locked_manual_submit.untethered = result.next_upgrade_last_locked_manual_submit.untethered + tmp + tmp;
+                              result.next_upgrade_last_locked_manual_submit.untethered = result.next_upgrade_last_locked_manual_submit.untethered + tmp + tmp + non_upgradeable;
                       }
                       if (itr->balance_upgrade.max > itr->balance_upgrade.used)
                       {
@@ -235,13 +239,13 @@ optional<queue_projection_res> database_access_layer::get_queue_state_for_accoun
                               amount *= itr->balance_upgrade.multipliers[upgrades];
                               upgrades++;
                           }
-                          tmp.cycles = amount;
+                          tmp.cycles = amount + itr->non_upgradeable_amount;
                           tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
-                          result.after_all_upgrades_manual_submit = result.after_all_upgrades_manual_submit + tmp;
+                          result.after_all_upgrades_manual_submit = result.after_all_upgrades_manual_submit + tmp + non_upgradeable;
                       }
                       else
                       {
-                          result.after_all_upgrades_manual_submit = result.after_all_upgrades_manual_submit + tmp;
+                          result.after_all_upgrades_manual_submit = result.after_all_upgrades_manual_submit + tmp + non_upgradeable;
                       }
                   }
                   else if (lic->kind == license_kind::utility)
