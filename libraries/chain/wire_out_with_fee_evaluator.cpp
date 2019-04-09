@@ -84,7 +84,12 @@ namespace graphene { namespace chain {
             // Treat negative limit as infinite:
             if (withdrawal_limit_obj_->limit.amount >= 0)
             {
-              if (d.head_block_time() - withdrawal_limit_obj_->beginning_of_withdrawal_interval < fc::microseconds(limit.duration * 1000000))
+              bool check;
+              if (d.head_block_time() >= HARDFORK_BLC_342_TIME)
+                check = d.head_block_time() - withdrawal_limit_obj_->beginning_of_withdrawal_interval < fc::microseconds(static_cast<int64_t>(limit.duration) * 1000000);
+              else
+                check = d.head_block_time() - withdrawal_limit_obj_->beginning_of_withdrawal_interval < fc::microseconds(limit.duration * 1000000);
+              if (check)
                 FC_ASSERT( withdrawal_limit_obj_->limit - withdrawal_limit_obj_->spent >= spent, "Cannot withdraw because of the limit, spent ${s}, amount ${a}", ("s", withdrawal_limit_obj_->spent)("a", spent) );
               else
                 FC_ASSERT( withdrawal_limit_obj_->limit >= spent, "Cannot withdraw because of the limit ${l}", ("l", withdrawal_limit_obj_->limit) );
@@ -121,9 +126,15 @@ namespace graphene { namespace chain {
       }
       else
       {
-        d.modify(*withdrawal_limit_obj_, [&](withdrawal_limit_object& o){
+          bool check;
+          if (d.head_block_time() >= HARDFORK_BLC_342_TIME)
+            check = d.head_block_time() - withdrawal_limit_obj_->beginning_of_withdrawal_interval > fc::microseconds(static_cast<int64_t>(withdrawal_limit_->duration) * 1000000);
+          else
+            check = d.head_block_time() - withdrawal_limit_obj_->beginning_of_withdrawal_interval > fc::microseconds(withdrawal_limit_->duration * 1000000);
+
+          d.modify(*withdrawal_limit_obj_, [&](withdrawal_limit_object& o){
           o.last_withdrawal = d.head_block_time();
-          if (d.head_block_time() - o.beginning_of_withdrawal_interval > fc::microseconds(withdrawal_limit_->duration * 1000000))
+          if (check)
           {
             o.beginning_of_withdrawal_interval = d.head_block_time();
             o.spent = spent;
