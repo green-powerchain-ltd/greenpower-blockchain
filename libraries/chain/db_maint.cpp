@@ -767,22 +767,41 @@ void database::perform_upgrades(const account_object& account, const upgrade_eve
                   license_history.balance_upgrade(0);
                else
                {
+                  auto used_upgrades = license_history.balance_upgrade.used;
                   auto amount = license_history.balance_upgrade(license_history.amount_to_upgrade());
+
                   // If this is a president license, add upgraded amount to the current amount:
                   if (lio.vault_license_kind == chartered || lio.vault_license_kind == utility || lio.vault_license_kind == package)
                   {
-                     auto origin = fc::reflector<dascoin_origin_kind>::to_string(dascoin_origin_kind::reserve_cycles);
-                     std::ostringstream comment;
-                     comment << "Licence "
-                             << license_id_to_string(license_history.base_amount)
-                             << " Upgrade "
-                             << (int) license_history.balance_upgrade.used
-                             << "/"
-                             << (int) license_history.balance_upgrade.max;
-                     push_queue_submission(origin, license_history.license, account.id, amount, license_history.frequency_lock, comment.str());
-                     push_applied_operation(
-                          record_submit_charter_license_cycles_operation(get_chain_authorities().license_issuer, account.id, amount, license_history.frequency_lock)
-                     );
+                     //NOTE: Skip upgrade event in case of overflowing DASCOIN MAX SUPPLY
+                     share_type upgrade_amount = cycles_to_dascoin(amount, license_history.frequency_lock);
+                     if (upgrade_amount + get_total_dascoin_amount_in_system() > DASCOIN_MAX_DASCOIN_SUPPLY * DASCOIN_DEFAULT_ASSET_PRECISION)
+                     {
+                         ilog("*** Skip submit cycles for license: ${1}:${2}, dasc_current: ${3}, because it would exceed max dascoin supply ${4}.",
+                             ("1", license_id_to_string(license_history.base_amount))
+                             ("2", upgrade_amount.value / DASCOIN_DEFAULT_ASSET_PRECISION)
+                             ("3", get_total_dascoin_amount_in_system().value / DASCOIN_DEFAULT_ASSET_PRECISION)
+                             ("4", DASCOIN_MAX_DASCOIN_SUPPLY));
+
+                         //NOTE: Reset balance_upgrade.used to saved value, because operator() is automaticaly increasing it
+                         license_history.balance_upgrade.used = used_upgrades;
+                         continue;
+                     }
+                     else
+                     {
+                        auto origin = fc::reflector<dascoin_origin_kind>::to_string(dascoin_origin_kind::reserve_cycles);
+                        std::ostringstream comment;
+                        comment << "Licence "
+                                << license_id_to_string(license_history.base_amount)
+                                << " Upgrade "
+                                << (int) license_history.balance_upgrade.used
+                                << "/"
+                                << (int) license_history.balance_upgrade.max;
+                        push_queue_submission(origin, license_history.license, account.id, amount, license_history.frequency_lock, comment.str());
+                        push_applied_operation(
+                             record_submit_charter_license_cycles_operation(get_chain_authorities().license_issuer, account.id, amount, license_history.frequency_lock)
+                        );
+                     }
                   }
                   else
                   {
