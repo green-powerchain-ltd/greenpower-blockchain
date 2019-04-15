@@ -213,33 +213,47 @@ optional<queue_projection_res> database_access_layer::get_queue_state_for_accoun
                   }
                   else if (lic->kind == license_kind::locked_frequency)// && lic->up_policy != detail::president)
                   {
-                      if (lic->up_policy != detail::president)
-                          tmp.cycles = itr->amount;
-                      else
-                          tmp.cycles = itr->base_amount + (itr->base_amount * itr->bonus_percent / 100);
+                      tmp.cycles = itr->amount;
                       tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
+
                       cycles_res non_upgradeable{itr->non_upgradeable_amount, _db.cycles_to_dascoin(itr->non_upgradeable_amount, itr->frequency_lock)};
+
                       if (account->is_tethered())
                           result.total_locked_manual_submit.tethered = result.total_locked_manual_submit.tethered + tmp + non_upgradeable;
                       else
                           result.total_locked_manual_submit.untethered = result.total_locked_manual_submit.untethered + tmp + non_upgradeable;
+
                       if (itr->balance_upgrade.max - itr->balance_upgrade.used == 1)
                       {
-                          if (account->is_tethered())
-                              result.next_upgrade_last_locked_manual_submit.tethered = result.next_upgrade_last_locked_manual_submit.tethered + tmp + tmp + non_upgradeable;
+                        if (lic->up_policy == detail::president)
+                        {
+                            tmp.cycles += 2 * (itr->base_amount + (itr->base_amount * itr->bonus_percent / 100));
+                            tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
+                        }
+                        else
+                        {
+                            tmp = tmp + tmp;
+                        }
+
+                        if (account->is_tethered())
+                              result.next_upgrade_last_locked_manual_submit.tethered = result.next_upgrade_last_locked_manual_submit.tethered + tmp + non_upgradeable;
                           else
-                              result.next_upgrade_last_locked_manual_submit.untethered = result.next_upgrade_last_locked_manual_submit.untethered + tmp + tmp + non_upgradeable;
+                              result.next_upgrade_last_locked_manual_submit.untethered = result.next_upgrade_last_locked_manual_submit.untethered + tmp + non_upgradeable;
                       }
+
                       if (itr->balance_upgrade.max > itr->balance_upgrade.used)
                       {
                           auto upgrades = itr->balance_upgrade.used;
                           auto amount = itr->amount;
                           while(upgrades < itr->balance_upgrade.max)
                           {
-                              amount *= itr->balance_upgrade.multipliers[upgrades];
+                              if (lic->up_policy != detail::president)
+                                amount *= itr->balance_upgrade.multipliers[upgrades];
+                              else
+                                amount += (itr->base_amount + (itr->base_amount * itr->bonus_percent / 100)) * itr->balance_upgrade.multipliers[upgrades];
                               upgrades++;
                           }
-                          tmp.cycles = amount + itr->non_upgradeable_amount;
+                          tmp.cycles = amount;
                           tmp.dascoin = _db.cycles_to_dascoin(tmp.cycles, itr->frequency_lock);
                           result.after_all_upgrades_manual_submit = result.after_all_upgrades_manual_submit + tmp + non_upgradeable;
                       }
