@@ -342,6 +342,9 @@ class wallet_api
        * @returns a list of the given account's balances
        */
       vector<asset_reserved>            list_account_balances(const string& id);
+      
+      vector<tethered_accounts_balances_collection> list_tethered_accounts_balances(const string& id);
+
       /** Lists all assets registered on the blockchain.
        *
        * To list all assets, pass the empty string \c "" for the lowerbound to start
@@ -1107,6 +1110,8 @@ class wallet_api
                                         string reserved,
                                         string unique_id,
                                         bool broadcast = false);
+
+      signed_transaction issue_asset2(string to_account, string amount, string reserved, string symbol, string unique_id, bool broadcast = false);
 
       /** Update the core options on an asset.
        * There are a number of options which all assets in the network use. These options are
@@ -2459,6 +2464,7 @@ FC_API( graphene::wallet::wallet_api,
         (list_my_accounts)
         (list_accounts)
         (list_account_balances)
+        (list_tethered_accounts_balances)
         (list_assets)
         (get_license_types)
         (import_key)
@@ -2567,6 +2573,7 @@ FC_API( graphene::wallet::wallet_api,
 
         // Web assets:
         (issue_webasset)
+        (issue_asset2)
 
         // Cycles:
         (get_total_cycles)

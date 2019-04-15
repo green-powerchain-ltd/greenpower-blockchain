@@ -3068,6 +3068,30 @@ public:
        return sign_transaction(tx, broadcast);
    }
 
+   signed_transaction issue_asset2(string to_account, string amount, string reserved, string symbol, string unique_id, bool broadcast)
+   {
+       const auto asset_obj = get_asset(symbol);
+
+       account_object to = get_account(to_account);
+
+       asset_create_issue_request_operation issue_op;
+       issue_op.issuer = asset_obj.issuer;
+       issue_op.receiver = to.id;
+       issue_op.amount =
+           asset_obj.amount_from_string(amount).amount;
+       issue_op.asset_id = asset_obj.id;
+       issue_op.reserved_amount =
+           asset_obj.amount_from_string(reserved).amount;
+       issue_op.unique_id = unique_id;
+
+       signed_transaction tx;
+       tx.operations.push_back(issue_op);
+       set_operation_fees(tx,_remote_db->get_global_properties().parameters.current_fees);
+       tx.validate();
+
+       return sign_transaction(tx, broadcast);
+   }
+
    std::map<string,std::function<string(fc::variant,const fc::variants&)>> get_result_formatters() const
    {
       std::map<string,std::function<string(fc::variant,const fc::variants&)> > m;
@@ -4177,6 +4201,13 @@ vector<asset_reserved> wallet_api::list_account_balances(const string& id)
    return my->_remote_db->get_account_balances(get_account(id).id, flat_set<asset_id_type>());
 }
 
+vector<tethered_accounts_balances_collection> wallet_api::list_tethered_accounts_balances(const string& id)
+{
+   if( auto real_id = detail::maybe_id<account_id_type>(id) )
+      return my->_remote_db->get_tethered_accounts_balances(*real_id, flat_set<asset_id_type>());
+   return my->_remote_db->get_tethered_accounts_balances(get_account(id).id, flat_set<asset_id_type>());
+}
+
 vector<asset_object> wallet_api::list_assets(const string& lowerbound, uint32_t limit)const
 {
    return my->_remote_db->list_assets( lowerbound, limit );
@@ -4628,6 +4659,11 @@ signed_transaction wallet_api::issue_asset(string to_account, string amount, str
 signed_transaction wallet_api::issue_webasset(string to_account, string amount, string reserved, string unique_id, bool broadcast)
 {
     return my->issue_webasset(to_account, amount, reserved, unique_id, broadcast);
+}
+
+signed_transaction wallet_api::issue_asset2(string to_account, string amount, string reserved, string symbol, string unique_id, bool broadcast)
+{
+    return my->issue_asset2(to_account, amount, reserved, symbol, unique_id, broadcast);
 }
 
 signed_transaction wallet_api::transfer(string from, string to, string amount,
