@@ -123,7 +123,7 @@ class database_api_impl : public std::enable_shared_from_this<database_api_impl>
       // Markets / feeds
       vector<limit_order_object>         get_limit_orders(asset_id_type a, asset_id_type b, uint32_t limit)const;
       vector<limit_order_object>         get_limit_orders_for_account(account_id_type id, asset_id_type a, asset_id_type b, uint32_t limit)const;
-      limit_orders_grouped_by_price      get_limit_orders_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit)const;
+      limit_orders_grouped_by_price      get_limit_orders_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit, uint32_t precision)const;
       limit_orders_collection_grouped_by_price get_limit_orders_collection_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit_group, uint32_t limit_per_group)const;
       vector<call_order_object>          get_call_orders(asset_id_type a, uint32_t limit)const;
       vector<force_settlement_object>    get_settle_orders(asset_id_type a, uint32_t limit)const;
@@ -1341,10 +1341,15 @@ vector<limit_order_object> database_api_impl::get_limit_orders_for_account(accou
 
 limit_orders_grouped_by_price database_api::get_limit_orders_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit)const
 {
-   return my->get_limit_orders_grouped_by_price( a, b, limit );
+   return my->get_limit_orders_grouped_by_price( a, b, limit, ORDER_BOOK_QUERY_PRECISION );
 }
 
-limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_price(asset_id_type base, asset_id_type quote, uint32_t limit)const
+limit_orders_grouped_by_price database_api::get_limit_orders_grouped_by_price2(asset_id_type a, asset_id_type b, uint32_t limit, uint32_t precision)const
+{
+   return my->get_limit_orders_grouped_by_price( a, b, limit, asset::scaled_precision(precision).value );
+}
+
+limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_price(asset_id_type base, asset_id_type quote, uint32_t limit, uint32_t precision)const
 {
    const auto& limit_order_idx = _db.get_index_type<limit_order_index>();
    const auto& limit_price_idx = limit_order_idx.indices().get<by_price>();
@@ -1357,7 +1362,7 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
       swap_buy_sell = true;
    }
 
-   auto func = [this, &limit_price_idx, limit](asset_id_type& a, asset_id_type& b, std::vector<aggregated_limit_orders_with_same_price>& ret, bool ascending){
+   auto func = [this, &limit_price_idx, limit, precision](asset_id_type& a, asset_id_type& b, std::vector<aggregated_limit_orders_with_same_price>& ret, bool ascending){
       std::map<share_type, aggregated_limit_orders_with_same_price> helper_map;
 
       auto limit_itr = limit_price_idx.lower_bound(price::max(a, b));
@@ -1371,7 +1376,7 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
       {
          double price = ascending ? 1 / limit_itr->sell_price.to_real() : limit_itr->sell_price.to_real();
          // adjust price precision and value accordingly so we can form a key
-         auto p = round((ascending ? price * coef : price / coef) * ORDER_BOOK_QUERY_PRECISION);
+         auto p = round((ascending ? price * coef : price / coef) * precision);
          share_type price_key = static_cast<share_type>(p);
 
          auto helper_itr = helper_map.find(price_key);

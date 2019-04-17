@@ -486,6 +486,16 @@ class database_api
        * @param a ID of asset being sold
        * @param b ID of asset being purchased
        * @param limit Maximum number of orders groups to retrieve per buy and per sell vector
+       * @param precision Number of decimals
+       * @return The limit orders aggregated by same price, ordered by price (in buy - descending in sell - ascending)
+       */
+      limit_orders_grouped_by_price get_limit_orders_grouped_by_price2(asset_id_type a, asset_id_type b, uint32_t limit, uint32_t precision)const;
+
+      /**
+       * @brief Get limit orders in a given market grouped by price and divided in buy and sell vectors
+       * @param a ID of asset being sold
+       * @param b ID of asset being purchased
+       * @param limit Maximum number of orders groups to retrieve per buy and per sell vector
        * @return The limit orders aggregated by same price, ordered by price (in buy - descending in sell - ascending)
        */
       limit_orders_collection_grouped_by_price get_limit_orders_collection_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit_group, uint32_t limit_per_group)const;
@@ -1131,6 +1141,7 @@ FC_API( graphene::app::database_api,
    (get_limit_orders)
    (get_limit_orders_for_account)
    (get_limit_orders_grouped_by_price)
+   (get_limit_orders_grouped_by_price2)
    (get_limit_orders_collection_grouped_by_price)
    (get_call_orders)
    (get_settle_orders)
