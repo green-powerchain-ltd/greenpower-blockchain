@@ -1494,7 +1494,6 @@ limit_orders_collection_grouped_by_price database_api_impl::get_limit_orders_col
       swap_buy_sell = true;
    }
 
-
    auto func = [this, &limit_price_idx, limit_group, limit_per_group](asset_id_type& a, asset_id_type& b, std::vector<aggregated_limit_orders_with_same_price_collection>& ret, bool ascending){
       std::map<share_type, aggregated_limit_orders_with_same_price> helper_map;
 
@@ -1558,7 +1557,6 @@ limit_orders_collection_grouped_by_price database_api_impl::get_limit_orders_col
 
    return std::move(result);
 }
-
 
 vector<call_order_object> database_api::get_call_orders(asset_id_type a, uint32_t limit)const
 {
