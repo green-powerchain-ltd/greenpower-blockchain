@@ -1389,7 +1389,7 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
          }
          else
          {
-            helper_itr->second.base_volume += limit_itr->for_sale.value;;
+            helper_itr->second.base_volume += limit_itr->for_sale.value;
             helper_itr->second.quote_volume += round(ascending ? limit_itr->for_sale.value * price : limit_itr->for_sale.value / price);
             helper_itr->second.count++;
          }
