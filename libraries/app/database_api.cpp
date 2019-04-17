@@ -1484,7 +1484,6 @@ limit_orders_collection_grouped_by_price database_api_impl::get_limit_orders_col
    const auto& limit_order_idx = _db.get_index_type<limit_order_index>();
    const auto& limit_price_idx = limit_order_idx.indices().get<by_price>();
 
-
    limit_orders_collection_grouped_by_price result;
    bool swap_buy_sell = false;
    if(base < quote)
