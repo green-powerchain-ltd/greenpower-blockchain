@@ -1439,7 +1439,6 @@ limit_orders_collection_grouped_by_price database_api::get_limit_orders_collecti
    return my->get_limit_orders_collection_grouped_by_price( a, b, limit_group, limit_per_group );
 }
 
-
 template<typename IterStart, typename IterEnd>
 void database_api_impl::func_re_pack(IterStart helper_itr, IterEnd end, std::vector<aggregated_limit_orders_with_same_price_collection>& ret, uint32_t limit_group, uint32_t limit_per_group) const
 {
