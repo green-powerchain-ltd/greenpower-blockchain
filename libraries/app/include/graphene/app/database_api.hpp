@@ -473,7 +473,7 @@ class database_api
       vector<limit_order_object>get_limit_orders(asset_id_type a, asset_id_type b, uint32_t limit)const;
 
       /**
-       * @brief Get limit orders in a given market grouped by price and devided in buy and sell vectors
+       * @brief Get limit orders in a given market grouped by price and divided in buy and sell vectors
        * @param a ID of asset being sold
        * @param b ID of asset being purchased
        * @param limit Maximum number of orders groups to retrieve per buy and per sell vector
@@ -482,7 +482,7 @@ class database_api
       limit_orders_grouped_by_price get_limit_orders_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit)const;
 
       /**
-       * @brief Get limit orders in a given market grouped by price and devided in buy and sell vectors
+       * @brief Get limit orders in a given market grouped by price and divided in buy and sell vectors
        * @param a ID of asset being sold
        * @param b ID of asset being purchased
        * @param limit Maximum number of orders groups to retrieve per buy and per sell vector
