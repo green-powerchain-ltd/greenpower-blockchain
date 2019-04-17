@@ -1431,7 +1431,7 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
       func(quote, base, result.buy, false);
    }
 
-   return std::move(result);
+   return result;
 }
 
 limit_orders_collection_grouped_by_price database_api::get_limit_orders_collection_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit_group, uint32_t limit_per_group) const
