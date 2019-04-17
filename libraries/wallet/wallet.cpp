@@ -4347,6 +4347,16 @@ vector<limit_order_object> wallet_api::get_limit_orders(string a, string b, uint
    return my->_remote_db->get_limit_orders(get_asset(a).id, get_asset(b).id, limit);
 }
 
+limit_orders_grouped_by_price wallet_api::get_limit_orders_grouped_by_price(string a, string b, uint32_t limit)const
+{
+   return my->_remote_db->get_limit_orders_grouped_by_price(get_asset(a).id, get_asset(b).id, limit);
+}
+
+limit_orders_grouped_by_price wallet_api::get_limit_orders_grouped_by_price2(string a, string b, uint32_t limit, uint32_t precision)const
+{
+   return my->_remote_db->get_limit_orders_grouped_by_price2(get_asset(a).id, get_asset(b).id, limit, precision);
+}
+
 vector<call_order_object> wallet_api::get_call_orders(string a, uint32_t limit)const
 {
    return my->_remote_db->get_call_orders(get_asset(a).id, limit);
