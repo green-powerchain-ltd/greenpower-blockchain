@@ -1370,7 +1370,7 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
       while(limit_itr != limit_end)
       {
          double price = ascending ? 1 / limit_itr->sell_price.to_real() : limit_itr->sell_price.to_real();
-         // adjust price precision and value accordingly so we can forme key
+         // adjust price precision and value accordingly so we can form a key
          auto p = round((ascending ? price * coef : price / coef) * ORDER_BOOK_QUERY_PRECISION);
          share_type price_key = static_cast<share_type>(p);
 
