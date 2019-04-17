@@ -1360,8 +1360,8 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
    auto func = [this, &limit_price_idx, limit](asset_id_type& a, asset_id_type& b, std::vector<aggregated_limit_orders_with_same_price>& ret, bool ascending){
       std::map<share_type, aggregated_limit_orders_with_same_price> helper_map;
 
-      auto limit_itr = limit_price_idx.lower_bound(price::max(a,b));
-      auto limit_end = limit_price_idx.upper_bound(price::min(a,b));
+      auto limit_itr = limit_price_idx.lower_bound(price::max(a, b));
+      auto limit_end = limit_price_idx.upper_bound(price::min(a, b));
 
       auto& asset_a = _db.get(a);
       auto& asset_b = _db.get(b);
