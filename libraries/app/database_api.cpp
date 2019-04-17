@@ -1353,7 +1353,7 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
    bool swap_buy_sell = false;
    if(base < quote)
    {
-      std::swap(base,quote);
+      std::swap(base, quote);
       swap_buy_sell = true;
    }
 
