@@ -3195,6 +3195,14 @@ vector<asset> database_api_impl::get_amount_of_assets_pledged_to_project_in_phas
     vector<asset> result;
     map<asset_id_type, int> index_map;
 
+    // Get project
+    const auto& idx = _db.get_index_type<das33_project_index>().indices().get<by_id>();
+    auto project_iterator = idx.find(project);
+    auto project_object = &(*project_iterator);
+    result.emplace_back(asset{0, project_object->token_id});
+    result.emplace_back(asset{0, project_object->token_id});
+    index_map[project_object->token_id] = 0;
+
     auto default_pledge_id = das33_pledge_holder_id_type();
 
     const auto& pledges = _db.get_index_type<das33_pledge_holder_index>().indices().get<by_project>();
@@ -3211,8 +3219,12 @@ vector<asset> database_api_impl::get_amount_of_assets_pledged_to_project_in_phas
                 index_map[itr->pledged.asset_id] = result.size();
                 result.emplace_back(itr->pledged);
             }
+            result[index_map[project_object->token_id]] += (itr->base_expected + itr->bonus_expected);
+            result[1] += itr->base_expected;// * project_object->token_price;
         }
     }
+
+    result[1] = result[1] * project_object->token_price;
 
     return result;
 }
