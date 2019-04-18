@@ -1380,6 +1380,7 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
          share_type price_key = static_cast<share_type>(p);
 
          auto helper_itr = helper_map.find(price_key);
+         auto quote = round(ascending ? limit_itr->for_sale.value * price : limit_itr->for_sale.value / price);
 
          // if we are adding limit order with new price
          if(helper_itr == helper_map.end())
@@ -1387,7 +1388,7 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
             aggregated_limit_orders_with_same_price alo;
             alo.price = price_key;
             alo.base_volume = limit_itr->for_sale.value;
-            alo.quote_volume = round(ascending ? limit_itr->for_sale.value * price : limit_itr->for_sale.value / price);
+            alo.quote_volume = quote;
             alo.count = 1;
 
             helper_map[price_key] = alo;
@@ -1395,7 +1396,7 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
          else
          {
             helper_itr->second.base_volume += limit_itr->for_sale.value;
-            helper_itr->second.quote_volume += round(ascending ? limit_itr->for_sale.value * price : limit_itr->for_sale.value / price);
+            helper_itr->second.quote_volume += quote;
             helper_itr->second.count++;
          }
 
