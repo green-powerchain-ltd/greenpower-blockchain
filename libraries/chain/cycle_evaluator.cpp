@@ -38,6 +38,9 @@ void_result submit_reserve_cycles_to_queue_evaluator::do_evaluate(const submit_r
 { try {
   const auto& d = db();
 
+  FC_ASSERT( d.head_block_time() <= HARDFORK_BLC_340_DEPRECATE_MINTING_TIME,
+             "Minting deprecated from: ${1}.", ("1", HARDFORK_BLC_340_DEPRECATE_MINTING_TIME) );
+
   FC_ASSERT( d.get_global_properties().parameters.enable_cycle_issuing,
              "Submitting reserve cycles to the queue is disabled"
            );
@@ -80,6 +83,11 @@ object_id_type submit_reserve_cycles_to_queue_evaluator::do_apply(const submit_r
 
 void_result submit_cycles_to_queue_evaluator::do_evaluate(const submit_cycles_to_queue_operation& op)
 { try {
+
+  auto& d = db();
+  FC_ASSERT( d.head_block_time() <= HARDFORK_BLC_340_DEPRECATE_MINTING_TIME,
+             "Minting deprecated from: ${1}.", ("1", HARDFORK_BLC_340_DEPRECATE_MINTING_TIME) );
+
   detail::submit_cycles_evaluator_helper helper(db());
   fc::from_variant<license_type_object::space_id, license_type_object::type_id>(variant{op.comment}, _license_type);
   _license_information_obj = helper.do_evaluate(op, _license_type, op.frequency);
@@ -97,35 +105,38 @@ object_id_type submit_cycles_to_queue_evaluator::do_apply(const submit_cycles_to
 
 void_result fee_pool_cycles_submit_evaluator::do_evaluate(const fee_pool_cycles_submit_operation& op)
 { try {
-   auto& d = db();
-   const auto& account_obj = op.issuer(d);
+  auto& d = db();
+  const auto& account_obj = op.issuer(d);
 
-     // Only fee pool account is allowed to submit cycles with this operation
-     FC_ASSERT( op.issuer == d.get_dynamic_global_properties().fee_pool_account_id,
-                "Issuer '${n}' is not a fee pool account",
-                ("n", account_obj.name)
-              );
+  FC_ASSERT( d.head_block_time() <= HARDFORK_BLC_340_DEPRECATE_MINTING_TIME,
+             "Minting deprecated from: ${1}.", ("1", HARDFORK_BLC_340_DEPRECATE_MINTING_TIME) );
 
-     auto& cycle_balance = d.get_balance_object(op.issuer, d.get_cycle_asset_id());
+  // Only fee pool account is allowed to submit cycles with this operation
+  FC_ASSERT( op.issuer == d.get_dynamic_global_properties().fee_pool_account_id,
+             "Issuer '${n}' is not a fee pool account",
+             ("n", account_obj.name)
+           );
 
-     // Assure we have enough funds to submit:
-     FC_ASSERT( cycle_balance.balance >= op.amount,
-                "Cannot submit ${am} cycles, account '${n}' fee pool account cycle balance is ${b}",
-                ("am", op.amount)
-                ("n", account_obj.name)
-                ("b", cycle_balance.balance)
-              );
+  auto& cycle_balance = d.get_balance_object(op.issuer, d.get_cycle_asset_id());
 
-     // Assure that amount of cycles submitted would not exceed DASCOIN_MAX_DASCOIN_SUPPLY limit.
-     FC_ASSERT(d.cycles_to_dascoin(op.amount, d.get_dynamic_global_properties().frequency) + d.get_total_dascoin_amount_in_system() <= DASCOIN_MAX_DASCOIN_SUPPLY * DASCOIN_DEFAULT_ASSET_PRECISION,
-               "Cannot submit ${am} cycles with frequency (${f}), "
-               "because with amount (${dsc_system} DSC in system, "
-               "it would exceed DASCOIN_MAX_DASCOIN_SUPPLY limit ${dsc_max_limit} DSC",
-               ("am", op.amount)
-               ("f", d.get_dynamic_global_properties().frequency)
-               ("dsc_system", d.get_total_dascoin_amount_in_system())
-               ("dsc_max_limit", DASCOIN_MAX_DASCOIN_SUPPLY * DASCOIN_DEFAULT_ASSET_PRECISION)
-             );
+  // Assure we have enough funds to submit:
+  FC_ASSERT( cycle_balance.balance >= op.amount,
+             "Cannot submit ${am} cycles, account '${n}' fee pool account cycle balance is ${b}",
+             ("am", op.amount)
+             ("n", account_obj.name)
+             ("b", cycle_balance.balance)
+           );
+
+  // Assure that amount of cycles submitted would not exceed DASCOIN_MAX_DASCOIN_SUPPLY limit.
+  FC_ASSERT(d.cycles_to_dascoin(op.amount, d.get_dynamic_global_properties().frequency) + d.get_total_dascoin_amount_in_system() <= DASCOIN_MAX_DASCOIN_SUPPLY * DASCOIN_DEFAULT_ASSET_PRECISION,
+            "Cannot submit ${am} cycles with frequency (${f}), "
+            "because with amount (${dsc_system} DSC in system, "
+            "it would exceed DASCOIN_MAX_DASCOIN_SUPPLY limit ${dsc_max_limit} DSC",
+            ("am", op.amount)
+            ("f", d.get_dynamic_global_properties().frequency)
+            ("dsc_system", d.get_total_dascoin_amount_in_system())
+            ("dsc_max_limit", DASCOIN_MAX_DASCOIN_SUPPLY * DASCOIN_DEFAULT_ASSET_PRECISION)
+          );
 
   return {};
 
@@ -134,31 +145,35 @@ void_result fee_pool_cycles_submit_evaluator::do_evaluate(const fee_pool_cycles_
 object_id_type fee_pool_cycles_submit_evaluator::do_apply(const fee_pool_cycles_submit_operation& op)
 { try {
 
-   auto& d = db();
-   auto origin = fc::reflector<dascoin_origin_kind>::to_string(user_submit);
+  auto& d = db();
+  auto origin = fc::reflector<dascoin_origin_kind>::to_string(user_submit);
 
-   auto& cycle_balance = d.get_balance_object(op.issuer, d.get_cycle_asset_id());
-   d.modify(cycle_balance, [&op](account_balance_object& balance_obj){
-      balance_obj.balance -= op.amount;
-   });
+  auto& cycle_balance = d.get_balance_object(op.issuer, d.get_cycle_asset_id());
+  d.modify(cycle_balance, [&op](account_balance_object& balance_obj){
+     balance_obj.balance -= op.amount;
+  });
 
-   d.modify(d.get_cycle_asset().dynamic_asset_data_id(d), [&](asset_dynamic_data_object& addo)
-   {
-      addo.current_supply -= op.amount;
-   });
+  d.modify(d.get_cycle_asset().dynamic_asset_data_id(d), [&](asset_dynamic_data_object& addo)
+  {
+     addo.current_supply -= op.amount;
+  });
 
-   return d.push_queue_submission(origin, optional<license_type_id_type>(), op.issuer, op.amount, d.get_dynamic_global_properties().frequency, op.comment);
+  return d.push_queue_submission(origin, optional<license_type_id_type>(), op.issuer, op.amount, d.get_dynamic_global_properties().frequency, op.comment);
 
 } FC_CAPTURE_AND_RETHROW((op)) }
 
 void_result submit_cycles_to_queue_by_license_evaluator::do_evaluate(const operation_type& op)
 { try {
+
   detail::submit_cycles_evaluator_helper helper(db());
   _license_information_obj = helper.do_evaluate(op, op.license_type, op.frequency_lock);
 
   const auto& d = db();
   database_access_layer _dal(d);
   const auto& lic = _dal.get_license_type(op.license_type);
+
+  FC_ASSERT( d.head_block_time() <= HARDFORK_BLC_340_DEPRECATE_MINTING_TIME,
+             "Minting deprecated from: ${1}.", ("1", HARDFORK_BLC_340_DEPRECATE_MINTING_TIME) );
 
   //TODO: Write helper function for code below:
   if (lic.valid()) {
@@ -291,6 +306,9 @@ void_result issue_cycles_to_license_evaluator::do_evaluate(const operation_type&
   const auto& d = db();
   const auto& authority_obj = op.authority(d);
   const auto cycle_issuer_id = d.get_chain_authorities().cycle_issuer;
+
+  FC_ASSERT( d.head_block_time() <= HARDFORK_BLC_340_DEPRECATE_MINTING_TIME,
+             "Minting deprecated from: ${1}.", ("1", HARDFORK_BLC_340_DEPRECATE_MINTING_TIME) );
 
   // Make sure that this is the current cycle issuer:
   d.perform_chain_authority_check("cycle issuing", cycle_issuer_id, authority_obj);

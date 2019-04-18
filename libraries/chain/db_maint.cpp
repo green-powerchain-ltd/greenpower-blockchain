@@ -774,7 +774,17 @@ void database::perform_upgrades(const account_object& account, const upgrade_eve
                   {
                      //NOTE: Skip upgrade event in case of overflowing DASCOIN MAX SUPPLY
                      share_type upgrade_amount = cycles_to_dascoin(amount, license_history.frequency_lock);
-                     if (upgrade_amount + get_total_dascoin_amount_in_system() > DASCOIN_MAX_DASCOIN_SUPPLY * DASCOIN_DEFAULT_ASSET_PRECISION)
+                     if (head_block_time() > HARDFORK_BLC_340_DEPRECATE_MINTING_TIME)
+                     {
+                         ilog("*** Skip submit cycles for license: ${1}:${2}, because minting is deprecated.",
+                             ("1", license_id_to_string(license_history.base_amount))
+                             ("2", upgrade_amount.value / DASCOIN_DEFAULT_ASSET_PRECISION));
+
+                         //NOTE: Reset balance_upgrade.used to saved value, because operator() is automaticaly increasing it
+                         license_history.balance_upgrade.used = used_upgrades;
+                         continue;
+                     }
+                     else if (upgrade_amount + get_total_dascoin_amount_in_system() > DASCOIN_MAX_DASCOIN_SUPPLY * DASCOIN_DEFAULT_ASSET_PRECISION)
                      {
                          ilog("*** Skip submit cycles for license: ${1}:${2}, dasc_current: ${3}, because it would exceed max dascoin supply ${4}.",
                              ("1", license_id_to_string(license_history.base_amount))
