@@ -67,7 +67,7 @@ bool SendBulk(ES&& es)
    std::string bulking = joinBulkLines(es.bulk_lines);
    std::ofstream outfile;
 
-   outfile.open("bulk.txt", std::ios_base::out);
+   outfile.open("bulk.json", std::ios_base::out);
    outfile << bulking << "\n";
 
    graphene::utilities::CurlRequest curl_request;

@@ -31,7 +31,6 @@
 #include <graphene/chain/issued_asset_record_object.hpp>
 
 #include <fc/bloom_filter.hpp>
-#include <fc/smart_ref_impl.hpp>
 
 #include <fc/crypto/hex.hpp>
 #include <fc/uint128.hpp>
