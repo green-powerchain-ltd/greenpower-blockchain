@@ -387,7 +387,8 @@ class wallet_api
       vector<limit_order_object>        get_limit_orders(string a, string b, uint32_t limit)const;
       vector<call_order_object>         get_call_orders(string a, uint32_t limit)const;
       limit_orders_grouped_by_price     get_limit_orders_grouped_by_price(string a, string b, uint32_t limit)const;
-      limit_orders_grouped_by_price     get_limit_orders_grouped_by_price2(string a, string b, uint32_t limit, uint32_t precision)const;
+      limit_orders_grouped_by_price     get_limit_orders_grouped_by_price_with_precision(string a, string b, uint32_t limit, uint32_t precision)const;
+      limit_orders_collection_grouped_by_price get_limit_orders_collection_grouped_by_price(string a, string b, uint32_t limit_group, uint32_t limit_per_group)const;
       vector<force_settlement_object>   get_settle_orders(string a, uint32_t limit)const;
 
       /** Returns the block chain's slowly-changing settings.
@@ -2536,7 +2537,8 @@ FC_API( graphene::wallet::wallet_api,
         (get_limit_orders)
         (get_call_orders)
         (get_limit_orders_grouped_by_price)
-        (get_limit_orders_grouped_by_price2)
+        (get_limit_orders_grouped_by_price_with_precision)
+        (get_limit_orders_collection_grouped_by_price)
         (get_settle_orders)
         (save_wallet_file)
         (serialize_transaction)
