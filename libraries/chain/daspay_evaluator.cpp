@@ -24,8 +24,25 @@
 
 #include <graphene/chain/daspay_evaluator.hpp>
 #include <graphene/chain/database.hpp>
+#include <graphene/chain/market_object.hpp>
 
 namespace graphene { namespace chain {
+
+  void get_external_token_prices_in_eur(const asset_id_type& token_id, flat_set<share_type>& prices, bool ascending, uint32_t max_prices, const database& d)
+  {
+      auto& token = d.get(token_id);
+      double coefficient = asset::scaled_precision(token.precision).value * 1.0 / asset::scaled_precision(d.get_web_asset().precision).value;
+      const auto& external_idx = d.get_index_type<external_price_index>().indices().get<by_market_key>();
+      auto external_itr = external_idx.find(market_key{token_id, d.get_web_asset_id()});
+      if (external_itr != external_idx.end())
+      {
+        double price = ascending ? 1 / external_itr->external_price.to_real() : external_itr->external_price.to_real();
+        auto p = round((ascending ? price * coefficient : price / coefficient) * DASCOIN_DEFAULT_ASSET_PRECISION);
+        for (uint i = 0; i < max_prices; ++i) {
+            prices.insert(static_cast<share_type>(p));
+        }
+      }
+  }
 
   void_result set_daspay_transaction_ratio_evaluator::do_evaluate(const operation_type& op)
   { try {
@@ -294,7 +311,15 @@ namespace graphene { namespace chain {
     if (d.head_block_time() > HARDFORK_BLC_156_TIME)
     {
       flat_set<share_type> buy_prices;
-      d.get_groups_of_limit_order_prices(d.get_web_asset_id(), d.get_dascoin_asset_id(), buy_prices, false, 1);
+      const auto& use_external_price_for_token = d.get_global_properties().daspay_parameters.use_external_token_price;
+      if (std::find(use_external_price_for_token.begin(), use_external_price_for_token.end(), d.get_dascoin_asset_id()) != use_external_price_for_token.end())
+      {
+        get_external_token_prices_in_eur(d.get_dascoin_asset_id(), buy_prices, true, 1, d);
+      }
+      else
+      {
+        d.get_groups_of_limit_order_prices(d.get_web_asset_id(), d.get_dascoin_asset_id(), buy_prices, false, 1);
+      }
       FC_ASSERT( !buy_prices.empty(), "Cannot debit since there are no buy limit orders" );
       if (d.head_block_time() >= HARDFORK_FIX_DASPAY_PRICE_TIME)
         _to_debit = asset{ tmp.amount * 1000 * DASCOIN_DEFAULT_ASSET_PRECISION / *(buy_prices.begin()), d.get_dascoin_asset_id() };
@@ -356,7 +381,15 @@ namespace graphene { namespace chain {
     if (d.head_block_time() >= HARDFORK_BLC_156_TIME)
     {
       flat_set<share_type> sell_prices;
-      d.get_groups_of_limit_order_prices(d.get_dascoin_asset_id(), d.get_web_asset_id(), sell_prices, true, 1);
+      const auto& use_external_price_for_token = d.get_global_properties().daspay_parameters.use_external_token_price;
+      if (std::find(use_external_price_for_token.begin(), use_external_price_for_token.end(), d.get_dascoin_asset_id()) != use_external_price_for_token.end())
+      {
+        get_external_token_prices_in_eur(d.get_dascoin_asset_id(), sell_prices, true, 1, d);
+      }
+      else
+      {
+        d.get_groups_of_limit_order_prices(d.get_dascoin_asset_id(), d.get_web_asset_id(), sell_prices, true, 1);
+      }
       FC_ASSERT( !sell_prices.empty(), "Cannot credit since there are no sell limit orders ${a}", ("a", sell_prices.size()) );
       if (d.head_block_time() >= HARDFORK_FIX_DASPAY_PRICE_TIME)
         _to_credit = asset { tmp.amount * 1000 * DASCOIN_DEFAULT_ASSET_PRECISION / *(sell_prices.begin()), d.get_dascoin_asset_id() };
@@ -452,6 +485,30 @@ namespace graphene { namespace chain {
     });
 
     return {};
+
+  } FC_CAPTURE_AND_RETHROW((op)) }
+
+  void_result daspay_set_use_external_token_price_evaluator::do_evaluate(const operation_type& op)
+  { try {
+    const auto& d = db();
+    const auto& gpo = d.get_global_properties();
+    const auto& authority_obj = op.authority(d);
+
+    d.perform_chain_authority_check("daspay authority", gpo.authorities.daspay_administrator, authority_obj);
+
+    return {};
+
+  } FC_CAPTURE_AND_RETHROW((op)) }
+
+  void_result daspay_set_use_external_token_price_evaluator::do_apply(const operation_type& op)
+  { try {
+    auto& d = db();
+
+    d.modify(d.get_global_properties(), [&](global_property_object& gpo){
+      gpo.daspay_parameters.use_external_token_price = op.use_external_token_price;
+  });
+
+      return {};
 
   } FC_CAPTURE_AND_RETHROW((op)) }
 

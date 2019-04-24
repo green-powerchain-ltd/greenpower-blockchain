@@ -187,4 +187,13 @@ namespace graphene { namespace chain {
     void_result do_apply(const operation_type& op);
   };
 
+  class daspay_set_use_external_token_price_evaluator : public evaluator<daspay_set_use_external_token_price_evaluator>
+  {
+  public:
+    typedef daspay_set_use_external_token_price_operation operation_type;
+
+    void_result do_evaluate( const operation_type& op );
+    void_result do_apply( const operation_type& op );
+  };
+
 } }  // namespace graphene::chain

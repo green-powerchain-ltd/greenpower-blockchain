@@ -1965,6 +1965,16 @@ class wallet_api
                                                            optional<share_type> collateral_webeur,
                                                            bool broadcast) const;
 
+      /**
+       * Sets value of use_external_token_price array
+       * @param authority                authority that is issuing this operation, must be daspay_administrator
+       * @param use_external_token_price new value for array
+       * @param broadcast                true to broadcast the transaction on the network.
+       */
+      signed_transaction daspay_set_use_external_token_price(const string& authority,
+                                                           flat_set<asset_id_type> use_external_token_price,
+                                                           bool broadcast = false) const;
+
 
       ///////////////////////////////
       /// DELAYED OPERATIONS:     ///
@@ -2597,6 +2607,7 @@ FC_API( graphene::wallet::wallet_api,
         (daspay_credit_account)
         (get_daspay_authority_for_account)
         (update_daspay_clearing_parameters)
+        (daspay_set_use_external_token_price)
 
         // Das33
         (das33_pledge_asset)
