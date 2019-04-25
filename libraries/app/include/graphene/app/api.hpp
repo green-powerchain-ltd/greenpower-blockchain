@@ -110,12 +110,12 @@ namespace graphene { namespace app {
 
 
 
-        vector<operation_history_object> get_trade_history_for_account( const asset_id_type base,
-                                                                             const asset_id_type quote,
-                                                                             account_id_type account,
-                                                                             operation_history_id_type stop,
-                                                                             unsigned limit,
-                                                                             operation_history_id_type start)const;
+        vector<operation_history_object> get_trade_history_for_account( asset_id_type base,
+                                                                        asset_id_type quote,
+                                                                        account_id_type account,
+                                                                        operation_history_id_type stop,
+                                                                        unsigned limit,
+                                                                        operation_history_id_type start)const;
          /**
           * @breif Get operations relevant to the specified account referenced
           * by an event numbering specific to the account. The current number of operations

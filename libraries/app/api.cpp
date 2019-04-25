@@ -292,16 +292,17 @@ namespace graphene { namespace app {
                                        start);
     }
 
-    vector<operation_history_object> history_api::get_trade_history_for_account( const asset_id_type base,
-                                                                     const asset_id_type quote,
-                                                                     account_id_type account,
-                                                                     operation_history_id_type stop,
-                                                                     unsigned limit,
-                                                                     operation_history_id_type start)const
+    vector<operation_history_object> history_api::get_trade_history_for_account( asset_id_type base,
+                                                                                 asset_id_type quote,
+                                                                                 account_id_type account,
+                                                                                 operation_history_id_type stop,
+                                                                                 unsigned limit,
+                                                                                 operation_history_id_type start)const
     {
 
        FC_ASSERT( _app.chain_database() );
        const auto& db = *_app.chain_database();
+       if( base > quote ) std::swap( base, quote );
        auto fill_operation_type = operation(fill_order_operation()).which();
        return get_account_history_impl(account,
                                        [&fill_operation_type, &db, &base, &quote](const account_transaction_history_object* node) {
