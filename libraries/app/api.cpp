@@ -302,7 +302,6 @@ namespace graphene { namespace app {
 
        FC_ASSERT( _app.chain_database() );
        const auto& db = *_app.chain_database();
-       if( base > quote ) std::swap( base, quote );
        auto fill_operation_type = operation(fill_order_operation()).which();
        return get_account_history_impl(account,
                                        [&fill_operation_type, &db, &base, &quote](const account_transaction_history_object* node) {
