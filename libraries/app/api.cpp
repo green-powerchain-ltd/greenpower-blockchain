@@ -299,23 +299,27 @@ namespace graphene { namespace app {
                                                                                  unsigned limit,
                                                                                  operation_history_id_type start)const
     {
-
        FC_ASSERT( _app.chain_database() );
+       FC_ASSERT( limit <= 100 );
        const auto& db = *_app.chain_database();
        auto fill_operation_type = operation(fill_order_operation()).which();
-       return get_account_history_impl(account,
-                                       [&fill_operation_type, &db, &base, &quote](const account_transaction_history_object* node) {
-                                           auto& op = node->operation_id(db).op;
-                                           if(op.which() == fill_operation_type)
-                                           {
-                                              fill_order_operation fop = op.get<fill_order_operation>();
-                                              return fop.pays.asset_id == base && fop.receives.asset_id == quote;
-                                           }
-                                           return false;
-                                       },
-                                       stop,
-                                       limit,
-                                       start);
+       auto f = [&fill_operation_type, &db](const account_transaction_history_object* node, asset_id_type base, asset_id_type quote) {
+           auto& op = node->operation_id(db).op;
+           if(op.which() == fill_operation_type)
+           {
+               fill_order_operation fop = op.get<fill_order_operation>();
+               return fop.pays.asset_id == base && fop.receives.asset_id == quote;
+           }
+           return false;
+       };
+       vector<operation_history_object> r1 = get_account_history_impl(account, std::bind(f, std::placeholders::_1, base, quote), stop, limit, start);
+       vector<operation_history_object> r2 = get_account_history_impl(account, std::bind(f, std::placeholders::_1, quote, base), stop, limit, start);
+       vector<operation_history_object> result(r1);
+       std::move(r2.begin(), r2.end(), std::back_inserter(result));
+       std::sort(result.begin(), result.end(), [](const operation_history_object& a, const operation_history_object& b){
+           return a.id > b.id;
+       });
+       return result;
     }
 
     vector<operation_history_object> history_api::get_relative_account_history( account_id_type account,
