@@ -220,6 +220,8 @@ BOOST_AUTO_TEST_CASE( check_issued_webeur_test )
   found = _dal.check_issued_webeur("NL1");
   BOOST_CHECK( found );
 
+  generate_blocks(HARDFORK_BLC_340_TIME + fc::seconds(10));
+  GRAPHENE_REQUIRE_THROW( issue_webasset("NL3", wallet_id, 100, 100), fc::exception );
 } FC_LOG_AND_RETHROW() }
 
 BOOST_AUTO_TEST_CASE( check_unique_id_when_issuing_webeur_test )
