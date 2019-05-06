@@ -222,7 +222,7 @@ BOOST_AUTO_TEST_CASE( check_issued_webeur_test )
 
 } FC_LOG_AND_RETHROW() }
 
-BOOST_AUTO_TEST_CASE( check_unique_id_when_issueing_webeur_test )
+BOOST_AUTO_TEST_CASE( check_unique_id_when_issuing_webeur_test )
 { try {
   ACTOR(wallet);
   issue_webasset("NL1", wallet_id, 100, 100);
