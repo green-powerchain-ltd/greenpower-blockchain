@@ -35,7 +35,7 @@ namespace graphene { namespace chain {
     const auto& d = db();
 
     // Deprecate this operation from HARDFORK_BLC_340_TIME
-    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_TIME );
+    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_TIME && op.asset_to_wire.asset_id == d.get_web_asset_id(), "Wire out is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_TIME).to_iso_string()) );
 
     FC_ASSERT( op.asset_to_wire.asset_id != d.get_dascoin_asset_id(), "Cannot wire out dascoin asset" );
     FC_ASSERT( op.asset_to_wire.asset_id != d.get_cycle_asset_id(), "Cannot wire out cycle asset" );
@@ -163,8 +163,12 @@ namespace graphene { namespace chain {
   { try {
     const auto& d = db();
 
-    // Deprecate this operation from HARDFORK_BLC_340_TIME
-    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_TIME );
+    // Deprecate this operation from HARDFORK_BLC_340_TIME and web euro
+    if (d.head_block_time() >= HARDFORK_BLC_340_TIME)
+    {
+      const auto& obj = op.holder_object_id(d);
+      FC_ASSERT( obj.asset_id != d.get_web_asset_id(), "Wire out complete is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_TIME).to_iso_string()) );
+    }
 
     FC_ASSERT( op.wire_out_handler == d.get_chain_authorities().wire_out_handler );
 
@@ -188,8 +192,12 @@ namespace graphene { namespace chain {
   { try {
     const auto& d = db();
 
-    // Deprecate this operation from HARDFORK_BLC_340_TIME
-    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_TIME );
+    // Deprecate this operation from HARDFORK_BLC_340_TIME and web euro
+    if (d.head_block_time() >= HARDFORK_BLC_340_TIME)
+    {
+      const auto& obj = op.holder_object_id(d);
+      FC_ASSERT( obj.asset_id != d.get_web_asset_id(), "Wire out reject is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_TIME).to_iso_string()) );
+    }
 
     FC_ASSERT( op.wire_out_handler == d.get_chain_authorities().wire_out_handler );
 
