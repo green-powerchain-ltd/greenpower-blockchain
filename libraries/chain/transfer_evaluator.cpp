@@ -138,6 +138,9 @@ void_result transfer_vault_to_wallet_evaluator::do_evaluate(const transfer_vault
    FC_ASSERT ( op.asset_to_transfer.asset_id == d.get_web_asset_id() || op.asset_to_transfer.asset_id == d.get_dascoin_asset_id(),
                "Can only transfer web assets or dascoins" );
 
+   if (d.head_block_time() >= HARDFORK_BLC_340_TIME)
+     FC_ASSERT( op.asset_to_transfer.asset_id != d.get_web_asset_id(), "Transferring of web euros is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_TIME).to_iso_string()) );
+
    // Check if the accounts exist:
    const account_object& from_acc_obj = op.from_vault(d);
    const account_object& to_acc_obj = op.to_wallet(d);
@@ -222,6 +225,9 @@ void_result transfer_wallet_to_vault_evaluator::do_evaluate(const transfer_walle
    // NOTE: this check must be modified to apply for every kind of web asset there is.
    FC_ASSERT ( op.asset_to_transfer.asset_id == d.get_web_asset_id() || op.asset_to_transfer.asset_id == d.get_dascoin_asset_id(),
                "Can only transfer web assets or dascoins" );
+
+   if (d.head_block_time() >= HARDFORK_BLC_340_TIME)
+     FC_ASSERT( op.asset_to_transfer.asset_id != d.get_web_asset_id(), "Transferring of web euros is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_TIME).to_iso_string()) );
 
    // Check if the accounts exist:
    const account_object& from_acc_obj = op.from_wallet(d);
