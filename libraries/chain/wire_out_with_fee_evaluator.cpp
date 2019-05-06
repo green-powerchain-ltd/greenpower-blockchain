@@ -35,7 +35,8 @@ namespace graphene { namespace chain {
     const auto& d = db();
 
     // Deprecate this operation from HARDFORK_BLC_340_TIME
-    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_TIME && op.asset_to_wire.asset_id == d.get_web_asset_id(), "Wire out is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_TIME).to_iso_string()) );
+    if (d.head_block_time() >= HARDFORK_BLC_340_TIME)
+      FC_ASSERT( op.asset_to_wire.asset_id != d.get_web_asset_id(), "Wire out is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_TIME).to_iso_string()) );
 
     FC_ASSERT( op.asset_to_wire.asset_id != d.get_dascoin_asset_id(), "Cannot wire out dascoin asset" );
     FC_ASSERT( op.asset_to_wire.asset_id != d.get_cycle_asset_id(), "Cannot wire out cycle asset" );
