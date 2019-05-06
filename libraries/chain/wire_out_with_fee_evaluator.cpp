@@ -34,6 +34,9 @@ namespace graphene { namespace chain {
 
     const auto& d = db();
 
+    // Deprecate this operation from HARDFORK_BLC_340_TIME
+    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_TIME );
+
     FC_ASSERT( op.asset_to_wire.asset_id != d.get_dascoin_asset_id(), "Cannot wire out dascoin asset" );
     FC_ASSERT( op.asset_to_wire.asset_id != d.get_cycle_asset_id(), "Cannot wire out cycle asset" );
 
@@ -171,6 +174,9 @@ namespace graphene { namespace chain {
   { try {
     const auto& d = db();
 
+    // Deprecate this operation from HARDFORK_BLC_340_TIME
+    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_TIME );
+
     FC_ASSERT( op.wire_out_handler == d.get_chain_authorities().wire_out_handler );
 
     holder_ = &op.holder_object_id(d);
@@ -192,6 +198,9 @@ namespace graphene { namespace chain {
   void_result wire_out_with_fee_reject_evaluator::do_evaluate(const wire_out_with_fee_reject_operation& op)
   { try {
     const auto& d = db();
+
+    // Deprecate this operation from HARDFORK_BLC_340_TIME
+    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_TIME );
 
     FC_ASSERT( op.wire_out_handler == d.get_chain_authorities().wire_out_handler );
 
