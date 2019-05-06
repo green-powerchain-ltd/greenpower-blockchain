@@ -100,6 +100,10 @@ BOOST_AUTO_TEST_CASE( wire_out_web_asset_test )
   // Check if the wire out holder object was deleted:
   BOOST_CHECK_EQUAL( get_wire_out_holders(wallet_id, {get_web_asset_id()}).size(), 0 );
 
+  // This operation should fail after HARDFORK_BLC_340_TIME:
+  generate_blocks(HARDFORK_BLC_340_TIME + fc::seconds(10));
+  GRAPHENE_REQUIRE_THROW( wire_out(wallet_id, web_asset(1), "debit"), fc::exception );
+
 } FC_LOG_AND_RETHROW() }
 
 BOOST_AUTO_TEST_CASE( wire_out_web_asset_history_test )
