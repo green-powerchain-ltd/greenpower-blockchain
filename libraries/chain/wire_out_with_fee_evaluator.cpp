@@ -116,12 +116,15 @@ namespace graphene { namespace chain {
     {
       if (!withdrawal_limit_obj_)
       {
-        d.create<withdrawal_limit_object>([&](withdrawal_limit_object &o){
-          o.account = op.account;
-          o.beginning_of_withdrawal_interval = o.last_withdrawal = d.head_block_time();
-          o.spent = spent;
-          o.limit = withdrawal_limit_->limit;
-        });
+        if (withdrawal_limit_)
+        {
+          d.create<withdrawal_limit_object>([&](withdrawal_limit_object &o){
+            o.account = op.account;
+            o.beginning_of_withdrawal_interval = o.last_withdrawal = d.head_block_time();
+            o.spent = spent;
+            o.limit = withdrawal_limit_->limit;
+          });
+        }
       }
       else
       {
