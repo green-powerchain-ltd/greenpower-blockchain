@@ -1,4 +1,8 @@
 // #BLC340-HF_DeprecateMinting
 #ifndef HARDFORK_BLC_340_DEPRECATE_MINTING_TIME
+<<<<<<< HEAD
 #define HARDFORK_BLC_340_DEPRECATE_MINTING_TIME (fc::time_point_sec( 1557327600 ))
+=======
+#define HARDFORK_BLC_340_DEPRECATE_MINTING_TIME (fc::time_point_sec( 1556233200 ))
+>>>>>>> Cherry picked from BLC-340 branch.
 #endif
