@@ -131,4 +131,9 @@ namespace graphene { namespace chain {
       );
   }
 
+  void daspay_set_use_external_token_price_operation::validate() const
+  {
+
+  }
+
 } } // namespace graphene::chain

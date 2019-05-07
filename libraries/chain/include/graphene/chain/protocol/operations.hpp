@@ -208,6 +208,7 @@ namespace graphene { namespace chain {
             das33_set_use_market_price_for_token_operation,
 
             update_external_token_price_operation,
+            daspay_set_use_external_token_price_operation,
 
             // Virtual operations below this point:
 

@@ -1345,6 +1345,25 @@ public:
       return sign_transaction(tx, broadcast);
    } FC_CAPTURE_AND_RETHROW( (clearing_enabled)(clearing_interval_time_seconds)(collateral_dascoin)(collateral_webeur)(broadcast) ) }
 
+   signed_transaction daspay_set_use_external_token_price(const string& authority,
+                                                          flat_set<asset_id_type> use_external_token_price,
+                                                          bool broadcast = false)
+   { try {
+       FC_ASSERT( !self.is_locked() );
+
+       daspay_set_use_external_token_price_operation op;
+
+       op.authority = get_account(authority).id;
+       op.use_external_token_price = use_external_token_price;
+
+       signed_transaction tx;
+       tx.operations.push_back(op);
+       set_operation_fees( tx, _remote_db->get_global_properties().parameters.current_fees );
+       tx.validate();
+
+       return sign_transaction(tx, broadcast);
+    } FC_CAPTURE_AND_RETHROW( (authority)(use_external_token_price)(broadcast) ) }
+
    signed_transaction create_das33_project(const string& authority,
                                            const string& name,
                                            const string& owner,
@@ -6169,6 +6188,13 @@ signed_transaction wallet_api::update_daspay_clearing_parameters(const string& a
                                                collateral_dascoin,
                                                collateral_webeur,
                                                broadcast);
+}
+
+signed_transaction wallet_api::daspay_set_use_external_token_price(const string& authority,
+                                                                   flat_set<asset_id_type> use_external_token_price,
+                                                                   bool broadcast) const
+{
+    return my->daspay_set_use_external_token_price(authority, use_external_token_price, broadcast);
 }
 
 signed_transaction wallet_api::das33_pledge_asset(const string& account,
