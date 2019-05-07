@@ -33,8 +33,8 @@ namespace graphene { namespace chain {
 
     const auto& d = db();
 
-    // Deprecate this operation from HARDFORK_BLC_340_TIME
-    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_TIME, "Wire out is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_TIME).to_iso_string()) );
+    // Deprecate this operation from HARDFORK_BLC_340_DEPRECATE_MINTING_TIME
+    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_DEPRECATE_MINTING_TIME, "Wire out is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME).to_iso_string()) );
 
     // We can only wire out web assets for now. TODO: assets must be marked for wire out ability.
     FC_ASSERT( op.asset_to_wire.asset_id == d.get_web_asset_id() );
@@ -92,8 +92,8 @@ namespace graphene { namespace chain {
   { try {
     const auto& d = db();
 
-    // Deprecate this operation from HARDFORK_BLC_340_TIME
-    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_TIME, "Wire out complete is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_TIME).to_iso_string()) );
+    // Deprecate this operation from HARDFORK_BLC_340_DEPRECATE_MINTING_TIME
+    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_DEPRECATE_MINTING_TIME, "Wire out complete is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME).to_iso_string()) );
 
     FC_ASSERT( op.wire_out_handler == d.get_chain_authorities().wire_out_handler );
 
@@ -117,8 +117,8 @@ namespace graphene { namespace chain {
   { try {
     const auto& d = db();
 
-    // Deprecate this operation from HARDFORK_BLC_340_TIME
-    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_TIME, "Wire out reject is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_TIME).to_iso_string()) );
+    // Deprecate this operation from HARDFORK_BLC_340_DEPRECATE_MINTING_TIME
+    FC_ASSERT( d.head_block_time() < HARDFORK_BLC_340_DEPRECATE_MINTING_TIME, "Wire out reject is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME).to_iso_string()) );
 
     FC_ASSERT( op.wire_out_handler == d.get_chain_authorities().wire_out_handler );
 
