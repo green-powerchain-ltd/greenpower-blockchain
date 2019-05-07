@@ -2879,7 +2879,7 @@ optional<withdrawal_limit> database_api_impl::get_withdrawal_limit(account_id_ty
     if (itr2 == idx2.end())
         return withdrawal_limit{limit.limit * *p, asset{0, asset_id}, _db.head_block_time(), {}};
     
-    bool reset_limit = (_db.head_block_time() - itr2->beginning_of_withdrawal_interval > fc::microseconds(limit.duration * 1000000));
+    bool reset_limit = (_db.head_block_time() - itr2->beginning_of_withdrawal_interval > fc::microseconds(static_cast<int64_t>(limit.duration) * 1000000));
     asset spent;
     fc::time_point_sec when;
     if (reset_limit)
