@@ -220,15 +220,37 @@ BOOST_AUTO_TEST_CASE( check_issued_webeur_test )
   found = _dal.check_issued_webeur("NL1");
   BOOST_CHECK( found );
 
+  // After HARDFORK_BLC_340_DEPRECATE_MINTING_TIME issuing of web eur is deprecated:
+  generate_blocks(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME + fc::seconds(10));
+  GRAPHENE_REQUIRE_THROW( issue_webasset("NL3", wallet_id, 100, 100), fc::exception );
 } FC_LOG_AND_RETHROW() }
 
-BOOST_AUTO_TEST_CASE( check_unique_id_when_issueing_webeur_test )
+BOOST_AUTO_TEST_CASE( check_unique_id_when_issuing_webeur_test )
 { try {
   ACTOR(wallet);
   issue_webasset("NL1", wallet_id, 100, 100);
 
   // This will fail, unique id needs to be really unique:
   GRAPHENE_REQUIRE_THROW( issue_webasset("NL1", wallet_id, 100, 100), fc::exception );
+
+} FC_LOG_AND_RETHROW() }
+
+BOOST_AUTO_TEST_CASE( deprecation_of_webeur_transfer_test )
+{ try {
+  ACTOR(wallet);
+  VAULT_ACTOR(vault);
+
+  tether_accounts(wallet_id, vault_id);
+  issue_webasset("NL1", wallet_id, 100, 100);
+
+  // These work:
+  transfer_webasset_wallet_to_vault(wallet_id, vault_id, std::make_pair(50, 0));
+  transfer_webasset_vault_to_wallet(vault_id, wallet_id, std::make_pair(10, 0));
+
+  // This operation should fail after HARDFORK_BLC_340_DEPRECATE_MINTING_TIME:
+  generate_blocks(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME + fc::seconds(10));
+  GRAPHENE_REQUIRE_THROW( transfer_webasset_wallet_to_vault(wallet_id, vault_id, std::make_pair(50, 0)), fc::exception );
+  GRAPHENE_REQUIRE_THROW( transfer_webasset_vault_to_wallet(vault_id, wallet_id, std::make_pair(10, 0)), fc::exception );
 
 } FC_LOG_AND_RETHROW() }
 
