@@ -98,10 +98,7 @@ share_type database::get_total_dascoin_amount_in_system() const
 
 optional<price> database::get_price_in_web_eur(const asset_id_type asset_id) const
 {
-    if (asset_id == get_dascoin_asset_id())
-    {
-        return get_dynamic_global_properties().last_dascoin_price;
-    }
+
 
     if (asset_id == get_web_asset_id())
     {
@@ -111,6 +108,11 @@ optional<price> database::get_price_in_web_eur(const asset_id_type asset_id) con
     const auto& use_market_price_for_token = get_global_properties().use_market_price_for_token;
     if (std::find(use_market_price_for_token.begin(), use_market_price_for_token.end(), asset_id) != use_market_price_for_token.end())
     {
+      if (asset_id == get_dascoin_asset_id())
+      {
+          return get_dynamic_global_properties().last_dascoin_price;
+      }
+
       const auto& market_idx = get_index_type<last_price_index>().indices().get<by_market_key>();
       auto market_itr = market_idx.find(market_key{asset_id, get_web_asset_id()});
       if (market_itr != market_idx.end())

@@ -69,7 +69,7 @@ namespace graphene { namespace chain {
          bool delayed_operations_resolver_enabled = DASCOIN_DEFAULT_DELAYED_OPERATIONS_RESOLVER_ENABLED; ///< by default off
          uint32_t delayed_operations_resolver_interval_time_seconds = DASCOIN_DEFAULT_DELAYED_OPERATIONS_RESOLVER_INTERVAL_TIME_SECONDS; ///< in seconds
 
-         flat_set<asset_id_type> use_market_price_for_token{};
+         flat_set<asset_id_type> use_market_price_for_token{asset_id_type{DASCOIN_DASCOIN_INDEX}};
    };
 
    /**
