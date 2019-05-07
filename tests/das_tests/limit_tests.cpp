@@ -26,6 +26,7 @@
 #include <graphene/chain/database.hpp>
 #include <graphene/chain/access_layer.hpp>
 #include <graphene/chain/exceptions.hpp>
+#include <graphene/chain/upgrade_event_object.hpp>
 
 #include <graphene/chain/license_objects.hpp>
 
@@ -36,6 +37,68 @@ using namespace graphene::chain::test;
 
 BOOST_FIXTURE_TEST_SUITE( dascoin_tests, database_fixture )
 BOOST_FIXTURE_TEST_SUITE( limit_tests, database_fixture )
+
+BOOST_AUTO_TEST_CASE( max_dascoins_supply_upgrade_test )
+{
+  try
+  {
+    VAULT_ACTOR(first)
+    ACTOR(wallet)
+
+    auto vp_charter = *(_dal.get_license_type("vice_president_charter"));
+    variant v;
+    fc::to_variant(vp_charter.id, v);
+    const uint32_t bonus_percent = 10;
+    const uint32_t frequency_lock = 1;
+    const uint32_t vp_charter_amount = DASCOIN_BASE_VICE_PRESIDENT_CYCLES + (bonus_percent * DASCOIN_BASE_VICE_PRESIDENT_CYCLES) / 100;
+    auto license_administrator_id = db.get_global_properties().authorities.license_administrator;
+    const auto& dgpo = db.get_dynamic_global_properties();
+
+    // Frequency is 1 (easier math)
+    adjust_frequency(frequency_lock * DASCOIN_FREQUENCY_PRECISION);
+
+    // System has 0 DSC issued
+    BOOST_CHECK_EQUAL(db.get_total_dascoin_amount_in_system().value, 0);
+
+    // Account has 0 cycles
+    BOOST_CHECK_EQUAL( get_cycle_balance(first_id).value, 0 );
+
+    // Issue VP_CHARTER license for first account
+    do_op(issue_license_operation(get_license_issuer_id(), first_id, vp_charter.id, bonus_percent, frequency_lock * DASCOIN_FREQUENCY_PRECISION, db.head_block_time()));
+
+    const auto& lio = (*first.license_information)(db);
+    const auto& lh = lio.history;
+    const auto& vp_charter_lr = lh[0];
+
+    // Check cycle balance 0 and upgrades used 0
+    BOOST_CHECK_EQUAL( get_cycle_balance(first_id).value, 0 );
+    BOOST_CHECK_EQUAL( vp_charter_lr.balance_upgrade.used, 0 );
+
+    // Issue remaining DASC to MAX DASCOIN SUPPLY
+    do_op(submit_reserve_cycles_to_queue_operation(get_cycle_issuer_id(), first_id, DASCOIN_MAX_DASCOIN_SUPPLY - 2 * vp_charter_amount, frequency_lock * DASCOIN_FREQUENCY_PRECISION, ""));
+
+    // Schedule first upgrade event
+    do_op(create_upgrade_event_operation(license_administrator_id,
+                                         dgpo.next_maintenance_time, {}, {}, "foo"));
+    generate_blocks(dgpo.next_maintenance_time);
+
+    // Check cycle balance 0 and upgrades used 1
+    BOOST_CHECK_EQUAL( get_cycle_balance(first_id).value, 0 );
+    BOOST_CHECK_EQUAL( vp_charter_lr.balance_upgrade.used, 1 );
+
+    // Schedule second upgrade event
+    do_op(create_upgrade_event_operation(license_administrator_id,
+                                         dgpo.next_maintenance_time, {}, {}, "foo"));
+    generate_blocks(dgpo.next_maintenance_time);
+
+    // Check cycle balance 0 and upgrades used 1
+    BOOST_CHECK_EQUAL( get_cycle_balance(first_id).value, 0 );
+    BOOST_CHECK_EQUAL( vp_charter_lr.balance_upgrade.used, 1 );
+
+    BOOST_CHECK_EQUAL( db.get_total_dascoin_amount_in_system().value, DASCOIN_MAX_DASCOIN_SUPPLY * DASCOIN_DEFAULT_ASSET_PRECISION );
+  }
+  FC_LOG_AND_RETHROW()
+}
 
 BOOST_AUTO_TEST_CASE( max_dascoins_supply_limit_test )
 {

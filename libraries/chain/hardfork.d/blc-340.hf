@@ -1,0 +1,4 @@
+// #BLC340-HF_DeprecateMinting
+#ifndef HARDFORK_BLC_340_DEPRECATE_MINTING_TIME
+#define HARDFORK_BLC_340_DEPRECATE_MINTING_TIME (fc::time_point_sec( 1557327600 ))
+#endif
