@@ -235,5 +235,24 @@ BOOST_AUTO_TEST_CASE( check_unique_id_when_issuing_webeur_test )
 
 } FC_LOG_AND_RETHROW() }
 
+BOOST_AUTO_TEST_CASE( deprecation_of_webeur_transfer_test )
+{ try {
+  ACTOR(wallet);
+  VAULT_ACTOR(vault);
+
+  tether_accounts(wallet_id, vault_id);
+  issue_webasset("NL1", wallet_id, 100, 100);
+
+  // These work:
+  transfer_webasset_wallet_to_vault(wallet_id, vault_id, std::make_pair(50, 0));
+  transfer_webasset_vault_to_wallet(vault_id, wallet_id, std::make_pair(10, 0));
+
+  // This operation should fail after HARDFORK_BLC_340_TIME:
+  generate_blocks(HARDFORK_BLC_340_TIME + fc::seconds(10));
+  GRAPHENE_REQUIRE_THROW( transfer_webasset_wallet_to_vault(wallet_id, vault_id, std::make_pair(50, 0)), fc::exception );
+  GRAPHENE_REQUIRE_THROW( transfer_webasset_vault_to_wallet(vault_id, wallet_id, std::make_pair(10, 0)), fc::exception );
+
+} FC_LOG_AND_RETHROW() }
+
 BOOST_AUTO_TEST_SUITE_END() // dascoin_tests::web_asset_tests
 BOOST_AUTO_TEST_SUITE_END() // dascoin_tests
