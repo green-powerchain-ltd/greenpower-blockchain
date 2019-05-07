@@ -112,8 +112,8 @@ BOOST_AUTO_TEST_CASE( wire_out_with_fee_web_asset_test )
   issue_btcasset("1", wallet_id, 15000, 15000);
   wire_out_with_fee(wallet_id, asset{5000, get_btc_asset_id()}, "BTC", "SOME_BTC_ADDRESS");
 
-  // After HARDFORK_BLC_340_TIME wire out for web euros is deprecated:
-  generate_blocks(HARDFORK_BLC_340_TIME + fc::seconds(10));
+  // After HARDFORK_BLC_340_DEPRECATE_MINTING_TIME wire out for web euros is deprecated:
+  generate_blocks(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME + fc::seconds(10));
   GRAPHENE_REQUIRE_THROW( wire_out_with_fee(wallet_id, asset{1, get_web_asset_id()}, "BTC", "SOME_BTC_ADDRESS"), fc::exception );
 
 } FC_LOG_AND_RETHROW() }

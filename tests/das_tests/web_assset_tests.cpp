@@ -220,8 +220,8 @@ BOOST_AUTO_TEST_CASE( check_issued_webeur_test )
   found = _dal.check_issued_webeur("NL1");
   BOOST_CHECK( found );
 
-  // After HARDFORK_BLC_340_TIME issuing of web eur is deprecated:
-  generate_blocks(HARDFORK_BLC_340_TIME + fc::seconds(10));
+  // After HARDFORK_BLC_340_DEPRECATE_MINTING_TIME issuing of web eur is deprecated:
+  generate_blocks(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME + fc::seconds(10));
   GRAPHENE_REQUIRE_THROW( issue_webasset("NL3", wallet_id, 100, 100), fc::exception );
 } FC_LOG_AND_RETHROW() }
 
@@ -247,8 +247,8 @@ BOOST_AUTO_TEST_CASE( deprecation_of_webeur_transfer_test )
   transfer_webasset_wallet_to_vault(wallet_id, vault_id, std::make_pair(50, 0));
   transfer_webasset_vault_to_wallet(vault_id, wallet_id, std::make_pair(10, 0));
 
-  // This operation should fail after HARDFORK_BLC_340_TIME:
-  generate_blocks(HARDFORK_BLC_340_TIME + fc::seconds(10));
+  // This operation should fail after HARDFORK_BLC_340_DEPRECATE_MINTING_TIME:
+  generate_blocks(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME + fc::seconds(10));
   GRAPHENE_REQUIRE_THROW( transfer_webasset_wallet_to_vault(wallet_id, vault_id, std::make_pair(50, 0)), fc::exception );
   GRAPHENE_REQUIRE_THROW( transfer_webasset_vault_to_wallet(vault_id, wallet_id, std::make_pair(10, 0)), fc::exception );
 

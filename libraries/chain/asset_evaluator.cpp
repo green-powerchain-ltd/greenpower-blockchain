@@ -597,9 +597,9 @@ void_result asset_create_issue_request_evaluator::do_evaluate(const asset_create
       }
    }
 
-   // Deprecate this operation from HARDFORK_BLC_340_TIME
-   if (d.head_block_time() >= HARDFORK_BLC_340_TIME)
-     FC_ASSERT( op.asset_id != d.get_web_asset_id(), "Issuing of web euros is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_TIME).to_iso_string()) );
+   // Deprecate this operation from HARDFORK_BLC_340_DEPRECATE_MINTING_TIME
+   if (d.head_block_time() >= HARDFORK_BLC_340_DEPRECATE_MINTING_TIME)
+     FC_ASSERT( op.asset_id != d.get_web_asset_id(), "Issuing of web euros is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME).to_iso_string()) );
 
    FC_ASSERT( op.asset_id != d.get_dascoin_asset_id(), "Can not issue DASC");
 
