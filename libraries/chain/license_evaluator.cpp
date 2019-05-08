@@ -111,6 +111,9 @@ void_result issue_license_evaluator::do_evaluate(const issue_license_operation& 
   const auto issuer_id = d.get_chain_authorities().license_issuer;
   const auto op_issuer_obj = op.issuer(d);
 
+  FC_ASSERT( d.head_block_time() <= HARDFORK_BLC_340_DEPRECATE_MINTING_TIME,
+             "Minting deprecated from: ${1}.", ("1", HARDFORK_BLC_340_DEPRECATE_MINTING_TIME) );
+
   // TODO: refactor this
   d.perform_chain_authority_check("license issuing", issuer_id, op_issuer_obj);
 

@@ -324,6 +324,11 @@ class database_api
        */
       optional<total_cycles_res> get_total_cycles() const;
 
+      /**
+       * @brief Get the amounts of cycles on different licenses in the system
+       */
+      optional<queue_projection_res> get_queue_projection() const;
+
       //////////
       // Keys //
       //////////
@@ -468,7 +473,7 @@ class database_api
       vector<limit_order_object>get_limit_orders(asset_id_type a, asset_id_type b, uint32_t limit)const;
 
       /**
-       * @brief Get limit orders in a given market grouped by price and devided in buy and sell vectors
+       * @brief Get limit orders in a given market grouped by price and divided in buy and sell vectors
        * @param a ID of asset being sold
        * @param b ID of asset being purchased
        * @param limit Maximum number of orders groups to retrieve per buy and per sell vector
@@ -477,7 +482,17 @@ class database_api
       limit_orders_grouped_by_price get_limit_orders_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit)const;
 
       /**
-       * @brief Get limit orders in a given market grouped by price and devided in buy and sell vectors
+       * @brief Get limit orders in a given market grouped by price and divided in buy and sell vectors
+       * @param a ID of asset being sold
+       * @param b ID of asset being purchased
+       * @param limit Maximum number of orders groups to retrieve per buy and per sell vector
+       * @param precision Number of decimals
+       * @return The limit orders aggregated by same price, ordered by price (in buy - descending in sell - ascending)
+       */
+      limit_orders_grouped_by_price get_limit_orders_grouped_by_price_with_precision(asset_id_type a, asset_id_type b, uint32_t limit, uint32_t precision)const;
+
+      /**
+       * @brief Get limit orders in a given market grouped by price and divided in buy and sell vectors
        * @param a ID of asset being sold
        * @param b ID of asset being purchased
        * @param limit Maximum number of orders groups to retrieve per buy and per sell vector
@@ -1007,6 +1022,14 @@ class database_api
       vector<asset> get_amount_of_assets_pledged_to_project(das33_project_id_type project) const;
 
       /**
+       * @brief Gets a sum of all pledges made to project
+       * @params project id of a project
+       * @params phase number of phase
+       * @return vector of assets, each with total sum of that asset pledged
+      */
+      vector<asset> get_amount_of_assets_pledged_to_project_in_phase(das33_project_id_type project, uint32_t phase) const;
+
+      /**
        * @brief Gets the amount of project tokens that a pledger can get for pledging a certain amount of asset
        * @params project id of a project
        * @params to_pledge asset user is pledging
@@ -1039,6 +1062,8 @@ class database_api
        */
       vector<external_price_object> get_external_prices() const;
 private:
+      template<typename T>
+      void repack(std::vector<T>& ret, std::map<share_type, aggregated_limit_orders_with_same_price> &helper_map, bool ascending, uint32_t limit)const;
       std::shared_ptr< database_api_impl > my;
 };
 
@@ -1085,6 +1110,7 @@ FC_API( graphene::app::database_api,
    (get_chain_id)
    (get_dynamic_global_properties)
    (get_total_cycles)
+   (get_queue_projection)
 
    // Keys
    (get_key_references)
@@ -1117,6 +1143,7 @@ FC_API( graphene::app::database_api,
    (get_limit_orders)
    (get_limit_orders_for_account)
    (get_limit_orders_grouped_by_price)
+   (get_limit_orders_grouped_by_price_with_precision)
    (get_limit_orders_collection_grouped_by_price)
    (get_call_orders)
    (get_settle_orders)
@@ -1215,6 +1242,7 @@ FC_API( graphene::app::database_api,
    (get_das33_pledges_by_project)
    (get_das33_projects)
    (get_amount_of_assets_pledged_to_project)
+   (get_amount_of_assets_pledged_to_project_in_phase)
    (get_amount_of_project_tokens_received_for_asset)
    (get_amount_of_asset_needed_for_project_token)
 

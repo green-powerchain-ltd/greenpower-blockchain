@@ -1,0 +1,4 @@
+// #BLC-342 Withdrawal limit time interval
+#ifndef HARDFORK_BLC_342_TIME
+#define HARDFORK_BLC_342_TIME (fc::time_point_sec( 1557327600 ))
+#endif

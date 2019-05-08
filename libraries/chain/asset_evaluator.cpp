@@ -597,9 +597,13 @@ void_result asset_create_issue_request_evaluator::do_evaluate(const asset_create
       }
    }
 
+   // Deprecate this operation from HARDFORK_BLC_340_DEPRECATE_MINTING_TIME
+   if (d.head_block_time() >= HARDFORK_BLC_340_DEPRECATE_MINTING_TIME)
+     FC_ASSERT( op.asset_id != d.get_web_asset_id(), "Issuing of web euros is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME).to_iso_string()) );
+
    FC_ASSERT( op.asset_id != d.get_dascoin_asset_id(), "Can not issue DASC");
 
-   //TODO check if account kind is Castodian or wallet account type if asset_id is cycle asset id
+   //TODO check if account kind is Custodian or wallet account type if asset_id is cycle asset id
    auto& receiver_account_obj = op.receiver(d);
    FC_ASSERT( op.asset_id != d.get_cycle_asset_id() ||
 		   	   (receiver_account_obj.kind == account_kind::wallet || receiver_account_obj.kind == account_kind::custodian),

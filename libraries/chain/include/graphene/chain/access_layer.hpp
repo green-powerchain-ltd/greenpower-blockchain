@@ -75,6 +75,91 @@ struct total_cycles_res {
     share_type total_dascoin = 0;
 };
 
+struct cycles_res {
+    cycles_res() = default;
+    cycles_res(share_type cycles, share_type dascoin)
+        : cycles(cycles)
+        , dascoin(dascoin)
+    {
+    }
+
+    cycles_res operator+ (cycles_res const &obj)
+    {
+        return cycles_res{cycles + obj.cycles, dascoin + obj.dascoin};
+    }
+
+    share_type cycles = 0;
+    share_type dascoin = 0;
+};
+
+struct autosubmit_res {
+    autosubmit_res() = default;
+    autosubmit_res(cycles_res charter, cycles_res utility, cycles_res package, cycles_res after_all_upgrades)
+        : charter(charter)
+        , utility(utility)
+        , package(package)
+        , after_all_upgrades(after_all_upgrades)
+    {
+        this->total = charter + utility + package;
+    }
+
+    autosubmit_res operator+ (autosubmit_res const &obj)
+    {
+        return autosubmit_res{charter + obj.charter, utility + obj.utility, package + obj.package, after_all_upgrades + obj.after_all_upgrades};
+    }
+
+    cycles_res total;
+    cycles_res charter;
+    cycles_res utility;
+    cycles_res package;
+    cycles_res after_all_upgrades;
+};
+
+struct manual_submit_res {
+    manual_submit_res() = default;
+    manual_submit_res(cycles_res tethered, cycles_res untethered)
+        : tethered(tethered)
+        , untethered(untethered)
+    {
+    }
+
+    manual_submit_res operator+ (manual_submit_res const &obj)
+    {
+        return manual_submit_res{tethered + obj.tethered, untethered + obj.untethered};
+    }
+
+    cycles_res tethered;
+    cycles_res untethered;
+};
+
+struct queue_projection_res {
+    queue_projection_res() = default;
+    queue_projection_res(autosubmit_res auto_submit, manual_submit_res total_locked, manual_submit_res next_locked, manual_submit_res utility, manual_submit_res package, cycles_res after_all_upgrades)
+        : auto_submit(auto_submit)
+        , total_locked_manual_submit(total_locked)
+        , next_upgrade_last_locked_manual_submit(next_locked)
+        , utility_manual_submit(utility)
+        , package_manual_submit(package)
+        , after_all_upgrades_manual_submit(after_all_upgrades)
+    {
+    }
+
+    queue_projection_res operator+ (queue_projection_res const &obj)
+    {
+        return queue_projection_res(auto_submit + obj.auto_submit, total_locked_manual_submit + obj.total_locked_manual_submit,
+                                    next_upgrade_last_locked_manual_submit + obj.next_upgrade_last_locked_manual_submit,
+                                    utility_manual_submit + obj.utility_manual_submit, package_manual_submit + obj.package_manual_submit,
+                                    after_all_upgrades_manual_submit + obj.after_all_upgrades_manual_submit);
+    }
+
+    autosubmit_res auto_submit;
+    manual_submit_res total_locked_manual_submit;
+    manual_submit_res next_upgrade_last_locked_manual_submit;
+    manual_submit_res utility_manual_submit;
+    manual_submit_res package_manual_submit;
+    cycles_res after_all_upgrades_manual_submit;
+};
+
 struct acc_id_share_t_res : public acc_id_res {
 
     using result_t = optional<share_type>;
@@ -284,6 +369,7 @@ class database_access_layer {
     acc_id_vec_cycle_agreement_res get_all_cycle_balances(account_id_type id) const;
     acc_id_share_t_res get_dascoin_balance(account_id_type id) const;
     optional<total_cycles_res> get_total_cycles(account_id_type id) const;
+    optional<queue_projection_res> get_queue_state_for_account(account_id_type id) const;
 
     vector<acc_id_share_t_res> get_free_cycle_balances_for_accounts(vector<account_id_type> ids) const;
     vector<acc_id_vec_cycle_agreement_res> get_all_cycle_balances_for_accounts(vector<account_id_type> ids) const;
@@ -385,6 +471,10 @@ class database_access_layer {
 
 FC_REFLECT(graphene::chain::cycle_agreement, (cycles)(frequency_lock))
 FC_REFLECT(graphene::chain::total_cycles_res, (total_cycles)(total_dascoin))
+FC_REFLECT(graphene::chain::cycles_res, (cycles)(dascoin))
+FC_REFLECT(graphene::chain::autosubmit_res, (total)(charter)(package)(utility)(after_all_upgrades))
+FC_REFLECT(graphene::chain::manual_submit_res, (tethered)(untethered))
+FC_REFLECT(graphene::chain::queue_projection_res, (auto_submit)(total_locked_manual_submit)(next_upgrade_last_locked_manual_submit)(utility_manual_submit)(package_manual_submit)(after_all_upgrades_manual_submit))
 
 FC_REFLECT(graphene::chain::acc_id_res, (account_id))
 FC_REFLECT_DERIVED(graphene::chain::acc_id_share_t_res, (graphene::chain::acc_id_res), (result))

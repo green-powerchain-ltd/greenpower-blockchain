@@ -31,7 +31,6 @@
 #include <graphene/chain/issued_asset_record_object.hpp>
 
 #include <fc/bloom_filter.hpp>
-#include <fc/smart_ref_impl.hpp>
 
 #include <fc/crypto/hex.hpp>
 #include <fc/uint128.hpp>
@@ -87,6 +86,7 @@ class database_api_impl : public std::enable_shared_from_this<database_api_impl>
       chain_id_type get_chain_id()const;
       dynamic_global_property_object get_dynamic_global_properties()const;
       optional<total_cycles_res> get_total_cycles() const;
+      optional<queue_projection_res> get_queue_projection() const;
 
       // Keys
       vector<vector<account_id_type>> get_key_references( vector<public_key_type> key )const;
@@ -122,8 +122,9 @@ class database_api_impl : public std::enable_shared_from_this<database_api_impl>
       // Markets / feeds
       vector<limit_order_object>         get_limit_orders(asset_id_type a, asset_id_type b, uint32_t limit)const;
       vector<limit_order_object>         get_limit_orders_for_account(account_id_type id, asset_id_type a, asset_id_type b, uint32_t limit)const;
-      limit_orders_grouped_by_price      get_limit_orders_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit)const;
-      limit_orders_collection_grouped_by_price get_limit_orders_collection_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit_group, uint32_t limit_per_group)const;
+      template<typename T>
+      using repack_function = std::function<void(std::vector<T>&, std::map<share_type, aggregated_limit_orders_with_same_price> &, bool)>;
+      template<typename T, typename Collection> T get_limit_orders_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit, uint32_t precision, repack_function<Collection>)const;
       vector<call_order_object>          get_call_orders(asset_id_type a, uint32_t limit)const;
       vector<force_settlement_object>    get_settle_orders(asset_id_type a, uint32_t limit)const;
       vector<call_order_object>          get_margin_positions( const account_id_type& id )const;
@@ -209,6 +210,7 @@ class database_api_impl : public std::enable_shared_from_this<database_api_impl>
       vector<das33_pledge_holder_object> get_das33_pledges_by_project(das33_project_id_type project, das33_pledge_holder_id_type from, uint32_t limit, optional<uint32_t> phase) const;
       vector<das33_project_object> get_das33_projects(const string& lower_bound_name, uint32_t limit) const;
       vector<asset> get_amount_of_assets_pledged_to_project(das33_project_id_type project) const;
+      vector<asset> get_amount_of_assets_pledged_to_project_in_phase(das33_project_id_type project, uint32_t phase) const;
       das33_project_tokens_amount get_amount_of_project_tokens_received_for_asset(das33_project_id_type project, asset to_pledge) const;
       das33_project_tokens_amount get_amount_of_asset_needed_for_project_token(das33_project_id_type project, asset_id_type asset_id, asset tokens) const;
 
@@ -391,9 +393,8 @@ class database_api_impl : public std::enable_shared_from_this<database_api_impl>
       database_access_layer _dal;
       const application_options* _app_options = nullptr;
 
-   private:
-      template<typename IterStart, typename IterEnd>
-      void func_re_pack(IterStart helper_itr, IterEnd end, std::vector<aggregated_limit_orders_with_same_price_collection>& ret, uint32_t limit_group, uint32_t limit_per_group) const;
+      template<typename Iter>
+      void func_re_pack(Iter helper_itr, Iter end, std::vector<aggregated_limit_orders_with_same_price_collection>& ret, uint32_t limit_group, uint32_t limit_per_group) const;
 };
 
 //////////////////////////////////////////////////////////////////////
@@ -692,11 +693,33 @@ optional<total_cycles_res> database_api_impl::get_total_cycles() const {
     {
         if (acc.is_vault())
         {
-            optional<total_cycles_res> vaultCycles = _dal.get_total_cycles(acc.get_id());     
+            optional<total_cycles_res> vaultCycles = _dal.get_total_cycles(acc.get_id());
             if (vaultCycles.valid())
             {
                 result.total_cycles += vaultCycles->total_cycles;
                 result.total_dascoin += vaultCycles->total_dascoin;
+            }
+        }
+    }
+    return result;
+}
+
+optional<queue_projection_res> database_api::get_queue_projection() const {
+    return my->get_queue_projection();
+}
+
+optional<queue_projection_res> database_api_impl::get_queue_projection() const {
+    queue_projection_res result;
+    const auto& accounts = _db.get_index_type<account_index>().indices().get<by_id>();
+
+    for (const account_object& acc : accounts)
+    {
+        if (acc.is_vault())
+        {
+            optional<queue_projection_res> vaultQueue = _dal.get_queue_state_for_account(acc.get_id());
+            if (vaultQueue.valid())
+            {
+                result = result + *vaultQueue;
             }
         }
     }
@@ -1153,9 +1176,12 @@ tethered_accounts_balances_collection database_api_impl::get_tethered_accounts_b
 
    for (const auto& i : accounts)
    {
-      const auto& balance_obj = _db.get_balance_object(get<0>(i), asset);
-      ret.total += balance_obj.balance + balance_obj.reserved;
-      ret.details.emplace_back(tethered_accounts_balance{get<0>(i), get<1>(i), get<2>(i), balance_obj.balance, balance_obj.reserved});
+      if (_db.check_if_balance_object_exists(get<0>(i), asset))
+      {
+         const auto& balance_obj = _db.get_balance_object(get<0>(i), asset);
+         ret.total += balance_obj.balance + balance_obj.reserved;
+         ret.details.emplace_back(tethered_accounts_balance{get<0>(i), get<1>(i), get<2>(i), balance_obj.balance, balance_obj.reserved});
+      }
    }
    return ret;
 }
@@ -1314,27 +1340,58 @@ vector<limit_order_object> database_api_impl::get_limit_orders_for_account(accou
 
 limit_orders_grouped_by_price database_api::get_limit_orders_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit)const
 {
-   return my->get_limit_orders_grouped_by_price( a, b, limit );
+   return my->get_limit_orders_grouped_by_price<limit_orders_grouped_by_price, aggregated_limit_orders_with_same_price>( a, b, limit, ORDER_BOOK_QUERY_PRECISION, std::bind(&database_api::repack<aggregated_limit_orders_with_same_price>, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, limit) );
 }
 
-limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_price(asset_id_type base, asset_id_type quote, uint32_t limit)const
+limit_orders_grouped_by_price database_api::get_limit_orders_grouped_by_price_with_precision(asset_id_type a, asset_id_type b, uint32_t limit, uint32_t precision)const
+{
+   return my->get_limit_orders_grouped_by_price<limit_orders_grouped_by_price, aggregated_limit_orders_with_same_price>( a, b, limit, asset::scaled_precision(precision).value, std::bind(&database_api::repack<aggregated_limit_orders_with_same_price>, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, limit) );
+}
+
+template<typename T>
+void database_api::repack(std::vector<T>& ret, std::map<share_type, aggregated_limit_orders_with_same_price> &helper_map, bool ascending, uint32_t limit)const
+{
+   uint32_t count = 0;
+   if(ascending)
+   {
+      auto helper_itr = helper_map.begin();
+      while(helper_itr != helper_map.end() && count < limit)
+      {
+         ret.push_back(helper_itr->second);
+         helper_itr++;
+         count++;
+      }
+   }
+   else
+   {
+      auto helper_itr = helper_map.rbegin();
+      while(helper_itr != helper_map.rend() && count < limit)
+      {
+         ret.push_back(helper_itr->second);
+         helper_itr++;
+         count++;
+      }
+   }
+}
+
+template<typename T, typename Collection> T database_api_impl::get_limit_orders_grouped_by_price(asset_id_type base, asset_id_type quote, uint32_t limit, uint32_t precision, repack_function<Collection> repack)const
 {
    const auto& limit_order_idx = _db.get_index_type<limit_order_index>();
    const auto& limit_price_idx = limit_order_idx.indices().get<by_price>();
 
-   limit_orders_grouped_by_price result;
+   T result;
    bool swap_buy_sell = false;
    if(base < quote)
    {
-      std::swap(base,quote);
+      std::swap(base, quote);
       swap_buy_sell = true;
    }
 
-   auto func = [this, &limit_price_idx, limit](asset_id_type& a, asset_id_type& b, std::vector<aggregated_limit_orders_with_same_price>& ret, bool ascending){
+   auto func = [this, &limit_price_idx, limit, precision, repack](asset_id_type& a, asset_id_type& b, std::vector<Collection>& ret, bool ascending){
       std::map<share_type, aggregated_limit_orders_with_same_price> helper_map;
 
-      auto limit_itr = limit_price_idx.lower_bound(price::max(a,b));
-      auto limit_end = limit_price_idx.upper_bound(price::min(a,b));
+      auto limit_itr = limit_price_idx.lower_bound(price::max(a, b));
+      auto limit_end = limit_price_idx.upper_bound(price::min(a, b));
 
       auto& asset_a = _db.get(a);
       auto& asset_b = _db.get(b);
@@ -1343,11 +1400,12 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
       while(limit_itr != limit_end)
       {
          double price = ascending ? 1 / limit_itr->sell_price.to_real() : limit_itr->sell_price.to_real();
-         // adjust price precision and value accordingly so we can forme key
-         auto p = round((ascending ? price * coef : price / coef) * ORDER_BOOK_QUERY_PRECISION);
+         // adjust price precision and value accordingly so we can form a key
+         auto p = round((ascending ? price * coef : price / coef) * precision);
          share_type price_key = static_cast<share_type>(p);
 
          auto helper_itr = helper_map.find(price_key);
+         auto quote = round(ascending ? limit_itr->for_sale.value * price : limit_itr->for_sale.value / price);
 
          // if we are adding limit order with new price
          if(helper_itr == helper_map.end())
@@ -1355,15 +1413,15 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
             aggregated_limit_orders_with_same_price alo;
             alo.price = price_key;
             alo.base_volume = limit_itr->for_sale.value;
-            alo.quote_volume = round(ascending ? limit_itr->for_sale.value * price : limit_itr->for_sale.value / price);
+            alo.quote_volume = quote;
             alo.count = 1;
 
             helper_map[price_key] = alo;
          }
          else
          {
-            helper_itr->second.base_volume += limit_itr->for_sale.value;;
-            helper_itr->second.quote_volume += round(ascending ? limit_itr->for_sale.value * price : limit_itr->for_sale.value / price);
+            helper_itr->second.base_volume += limit_itr->for_sale.value;
+            helper_itr->second.quote_volume += quote;
             helper_itr->second.count++;
          }
 
@@ -1371,27 +1429,7 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
       }
 
       // re-pack result in vector (from map) in desired order
-      uint32_t count = 0;
-      if(ascending)
-      {
-         auto helper_itr = helper_map.begin();
-         while(helper_itr != helper_map.end() && count < limit)
-         {
-            ret.push_back(helper_itr->second);
-            helper_itr++;
-            count++;
-         }
-      }
-      else
-      {
-         auto helper_itr = helper_map.rbegin();
-         while(helper_itr != helper_map.rend() && count < limit)
-         {
-            ret.push_back(helper_itr->second);
-            helper_itr++;
-            count++;
-         }
-      }
+      repack(ret, helper_map, ascending);
    };
 
    if(swap_buy_sell)
@@ -1404,17 +1442,27 @@ limit_orders_grouped_by_price database_api_impl::get_limit_orders_grouped_by_pri
       func(quote, base, result.buy, false);
    }
 
-   return std::move(result);
+   return result;
 }
 
 limit_orders_collection_grouped_by_price database_api::get_limit_orders_collection_grouped_by_price(asset_id_type a, asset_id_type b, uint32_t limit_group, uint32_t limit_per_group) const
 {
-   return my->get_limit_orders_collection_grouped_by_price( a, b, limit_group, limit_per_group );
+   auto f = [this, limit_group, limit_per_group](std::vector<aggregated_limit_orders_with_same_price_collection>& ret, std::map<share_type, aggregated_limit_orders_with_same_price> &helper_map, bool ascending) {
+      // re-pack result in vector (from map) in desired order
+      if(ascending)
+      {
+         my->func_re_pack(helper_map.begin(), helper_map.end(), ret, limit_group, limit_per_group);
+      }
+      else
+      {
+         my->func_re_pack(helper_map.rbegin(), helper_map.rend(), ret, limit_group, limit_per_group);
+      }
+   };
+   return my->get_limit_orders_grouped_by_price<limit_orders_collection_grouped_by_price, aggregated_limit_orders_with_same_price_collection>( a, b, 0, ORDER_BOOK_QUERY_PRECISION, f );
 }
 
-
-template<typename IterStart, typename IterEnd>
-void database_api_impl::func_re_pack(IterStart helper_itr, IterEnd end, std::vector<aggregated_limit_orders_with_same_price_collection>& ret, uint32_t limit_group, uint32_t limit_per_group) const
+template<typename Iter>
+void database_api_impl::func_re_pack(Iter helper_itr, Iter end, std::vector<aggregated_limit_orders_with_same_price_collection>& ret, uint32_t limit_group, uint32_t limit_per_group) const
 {
    uint32_t count = 0;
    while(helper_itr != end && count < limit_group)
@@ -1451,87 +1499,6 @@ void database_api_impl::func_re_pack(IterStart helper_itr, IterEnd end, std::vec
       }
    }
 }
-
-limit_orders_collection_grouped_by_price database_api_impl::get_limit_orders_collection_grouped_by_price(asset_id_type base, asset_id_type quote, uint32_t limit_group, uint32_t limit_per_group) const
-{
-   FC_ASSERT( limit_per_group <= 100 && limit_group <= 100);
-   const auto& limit_order_idx = _db.get_index_type<limit_order_index>();
-   const auto& limit_price_idx = limit_order_idx.indices().get<by_price>();
-
-
-   limit_orders_collection_grouped_by_price result;
-   bool swap_buy_sell = false;
-   if(base < quote)
-   {
-      std::swap(base,quote);
-      swap_buy_sell = true;
-   }
-
-
-   auto func = [this, &limit_price_idx, limit_group, limit_per_group](asset_id_type& a, asset_id_type& b, std::vector<aggregated_limit_orders_with_same_price_collection>& ret, bool ascending){
-      std::map<share_type, aggregated_limit_orders_with_same_price> helper_map;
-
-      auto limit_itr = limit_price_idx.lower_bound(price::max(a,b));
-      auto limit_end = limit_price_idx.upper_bound(price::min(a,b));
-
-      auto& asset_a = _db.get(a);
-      auto& asset_b = _db.get(b);
-      double coef = asset::scaled_precision(asset_a.precision).value * 1.0 / asset::scaled_precision(asset_b.precision).value;
-
-      while(limit_itr != limit_end)
-      {
-         double price = ascending ? 1 / limit_itr->sell_price.to_real() : limit_itr->sell_price.to_real();
-         // adjust price precision and value accordingly so we can forme key
-         auto p = round((ascending ? price * coef : price / coef) * ORDER_BOOK_QUERY_PRECISION);
-         share_type price_key = static_cast<share_type>(p);
-
-         auto helper_itr = helper_map.find(price_key);
-
-         share_type quote_amount = round(ascending ? limit_itr->for_sale.value * price : limit_itr->for_sale.value / price);
-         // if we are adding limit order with new price
-         if(helper_itr == helper_map.end())
-         {
-            aggregated_limit_orders_with_same_price alo;
-            alo.price = price_key;
-            alo.base_volume = limit_itr->for_sale.value;
-            alo.quote_volume = quote_amount;
-            alo.count = 1;
-            helper_map[price_key] = alo;
-         }
-         else
-         {
-            helper_itr->second.base_volume += limit_itr->for_sale.value;
-            helper_itr->second.quote_volume += quote_amount;
-            helper_itr->second.count++;
-         }
-
-         ++limit_itr;
-      }
-
-      // re-pack result in vector (from map) in desired order
-      if(ascending)
-      {
-         func_re_pack(helper_map.begin(), helper_map.end(), ret, limit_group, limit_per_group);
-      }
-      else
-      {
-         func_re_pack(helper_map.rbegin(), helper_map.rend(), ret, limit_group, limit_per_group);
-      }
-   };
-
-   if(swap_buy_sell)
-   {
-      func(base, quote, result.buy, false);
-      func(quote, base, result.sell, true);
-   } else
-   {
-      func(base, quote, result.sell, true);
-      func(quote, base, result.buy, false);
-   }
-
-   return std::move(result);
-}
-
 
 vector<call_order_object> database_api::get_call_orders(asset_id_type a, uint32_t limit)const
 {
@@ -2912,7 +2879,7 @@ optional<withdrawal_limit> database_api_impl::get_withdrawal_limit(account_id_ty
     if (itr2 == idx2.end())
         return withdrawal_limit{limit.limit * *p, asset{0, asset_id}, _db.head_block_time(), {}};
     
-    bool reset_limit = (_db.head_block_time() - itr2->beginning_of_withdrawal_interval > fc::microseconds(limit.duration * 1000000));
+    bool reset_limit = (_db.head_block_time() - itr2->beginning_of_withdrawal_interval > fc::microseconds(static_cast<int64_t>(limit.duration) * 1000000));
     asset spent;
     fc::time_point_sec when;
     if (reset_limit)
@@ -3156,6 +3123,50 @@ vector<asset> database_api_impl::get_amount_of_assets_pledged_to_project(das33_p
   }
 
   return result;
+}
+
+vector<asset> database_api::get_amount_of_assets_pledged_to_project_in_phase(das33_project_id_type project, uint32_t phase) const
+{
+    return my->get_amount_of_assets_pledged_to_project_in_phase(project, phase);
+}
+
+vector<asset> database_api_impl::get_amount_of_assets_pledged_to_project_in_phase(das33_project_id_type project, uint32_t phase) const
+{
+    vector<asset> result;
+    map<asset_id_type, int> index_map;
+
+    // Get project
+    const auto& idx = _db.get_index_type<das33_project_index>().indices().get<by_id>();
+    auto project_iterator = idx.find(project);
+    auto project_object = &(*project_iterator);
+    result.emplace_back(asset{0, project_object->token_id});
+    result.emplace_back(asset{0, project_object->token_id});
+    index_map[project_object->token_id] = 0;
+
+    auto default_pledge_id = das33_pledge_holder_id_type();
+
+    const auto& pledges = _db.get_index_type<das33_pledge_holder_index>().indices().get<by_project>();
+    for( auto itr = pledges.lower_bound(project); itr != pledges.upper_bound(project); ++itr )
+    {
+        if (itr->id != default_pledge_id && itr->phase_number == phase)
+        {
+            if (index_map.find(itr->pledged.asset_id) != index_map.end())
+            {
+                result[index_map[itr->pledged.asset_id]] += itr->pledged;
+            }
+            else
+            {
+                index_map[itr->pledged.asset_id] = result.size();
+                result.emplace_back(itr->pledged);
+            }
+            result[index_map[project_object->token_id]] += (itr->base_expected + itr->bonus_expected);
+            result[1] += itr->base_expected;// * project_object->token_price;
+        }
+    }
+
+    result[1] = result[1] * project_object->token_price;
+
+    return result;
 }
 
 das33_project_tokens_amount database_api::get_amount_of_project_tokens_received_for_asset(das33_project_id_type project, asset to_pledge) const

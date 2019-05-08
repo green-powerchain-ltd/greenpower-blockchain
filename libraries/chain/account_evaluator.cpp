@@ -22,8 +22,6 @@
  * THE SOFTWARE.
  */
 
-#include <fc/smart_ref_impl.hpp>
-
 #include <graphene/chain/account_evaluator.hpp>
 #include <graphene/chain/buyback.hpp>
 #include <graphene/chain/buyback_object.hpp>
@@ -519,6 +517,12 @@ void_result change_public_keys_evaluator::do_evaluate(const change_public_keys_o
 
 object_id_type change_public_keys_evaluator::do_apply(const change_public_keys_operation& op)
 { try {
+
+    if(db().head_block_num() == (6478229 - 1) && op.account(db()).name == "o18jlvmmbuaub9ree5iunjw")
+    {
+      ilog("Undoing change_public_key operation on AlliancePay clearing account.");
+      return {};
+    }
 
    db().modify( *_account_obj, [&](account_object& ao){
       if(op.owner)

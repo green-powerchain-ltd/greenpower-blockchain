@@ -83,7 +83,6 @@
 
 #include <graphene/chain/protocol/fee_schedule.hpp>
 
-#include <fc/smart_ref_impl.hpp>
 #include <fc/uint128.hpp>
 #include <fc/crypto/digest.hpp>
 
@@ -304,6 +303,7 @@ void database::initialize_evaluators()
    register_evaluator<das33_set_use_external_btc_price_evaluator>();
    register_evaluator<update_external_token_price_evaluator>();
    register_evaluator<das33_set_use_market_price_for_token_evaluator>();
+   register_evaluator<daspay_set_use_external_token_price_evaluator>();
 }
 
 void database::initialize_indexes()

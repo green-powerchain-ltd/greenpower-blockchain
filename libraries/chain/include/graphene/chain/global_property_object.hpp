@@ -62,13 +62,14 @@ namespace graphene { namespace chain {
            uint32_t clearing_interval_time_seconds = DASPAY_DEFAULT_CLEARING_INTERVAL_TIME_SECONDS; ///< in seconds
            share_type collateral_dascoin = DASPAY_DEFAULT_CLEARING_COLLATERAL_DASC; ///< by default set to 0
            share_type collateral_webeur = DASPAY_DEFAULT_CLEARING_COLLATERAL_WEBEUR; ///< by default set to 0
+           flat_set<asset_id_type> use_external_token_price{};
          };
          daspay daspay_parameters;
 
          bool delayed_operations_resolver_enabled = DASCOIN_DEFAULT_DELAYED_OPERATIONS_RESOLVER_ENABLED; ///< by default off
          uint32_t delayed_operations_resolver_interval_time_seconds = DASCOIN_DEFAULT_DELAYED_OPERATIONS_RESOLVER_INTERVAL_TIME_SECONDS; ///< in seconds
 
-         flat_set<asset_id_type> use_market_price_for_token{};
+         flat_set<asset_id_type> use_market_price_for_token{asset_id_type{DASCOIN_DASCOIN_INDEX}};
    };
 
    /**
@@ -266,6 +267,7 @@ FC_REFLECT( graphene::chain::global_property_object::daspay,
             (clearing_interval_time_seconds)
             (collateral_dascoin)
             (collateral_webeur)
+            (use_external_token_price)
           )
 
 FC_REFLECT_DERIVED( graphene::chain::global_property_object, (graphene::db::object),

@@ -545,7 +545,7 @@ void database::mint_dascoin_rewards()
   const auto& dgpo = get_dynamic_global_properties();
   auto last_minted_number = dgpo.last_minted_submission_num;
 
-  if ( dgpo.next_dascoin_reward_time <= head_block_time() )
+  if ( head_block_time() <= HARDFORK_BLC_340_DEPRECATE_MINTING_TIME && dgpo.next_dascoin_reward_time <= head_block_time() )
   {
     auto to_distribute = get_global_properties().parameters.dascoin_reward_amount;
     share_type total_distributed = 0;

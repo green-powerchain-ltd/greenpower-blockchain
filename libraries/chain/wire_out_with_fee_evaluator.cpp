@@ -34,6 +34,10 @@ namespace graphene { namespace chain {
 
     const auto& d = db();
 
+    // Deprecate this operation from HARDFORK_BLC_340_DEPRECATE_MINTING_TIME
+    if (d.head_block_time() >= HARDFORK_BLC_340_DEPRECATE_MINTING_TIME)
+      FC_ASSERT( op.asset_to_wire.asset_id != d.get_web_asset_id(), "Wire out is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME).to_iso_string()) );
+
     FC_ASSERT( op.asset_to_wire.asset_id != d.get_dascoin_asset_id(), "Cannot wire out dascoin asset" );
     FC_ASSERT( op.asset_to_wire.asset_id != d.get_cycle_asset_id(), "Cannot wire out cycle asset" );
 
@@ -84,7 +88,12 @@ namespace graphene { namespace chain {
             // Treat negative limit as infinite:
             if (withdrawal_limit_obj_->limit.amount >= 0)
             {
-              if (d.head_block_time() - withdrawal_limit_obj_->beginning_of_withdrawal_interval < fc::microseconds(limit.duration * 1000000))
+              bool check;
+              if (d.head_block_time() >= HARDFORK_BLC_342_TIME)
+                check = d.head_block_time() - withdrawal_limit_obj_->beginning_of_withdrawal_interval < fc::microseconds(static_cast<int64_t>(limit.duration) * 1000000);
+              else
+                check = d.head_block_time() - withdrawal_limit_obj_->beginning_of_withdrawal_interval < fc::microseconds(limit.duration * 1000000);
+              if (check)
                 FC_ASSERT( withdrawal_limit_obj_->limit - withdrawal_limit_obj_->spent >= spent, "Cannot withdraw because of the limit, spent ${s}, amount ${a}", ("s", withdrawal_limit_obj_->spent)("a", spent) );
               else
                 FC_ASSERT( withdrawal_limit_obj_->limit >= spent, "Cannot withdraw because of the limit ${l}", ("l", withdrawal_limit_obj_->limit) );
@@ -112,18 +121,27 @@ namespace graphene { namespace chain {
     {
       if (!withdrawal_limit_obj_)
       {
-        d.create<withdrawal_limit_object>([&](withdrawal_limit_object &o){
-          o.account = op.account;
-          o.beginning_of_withdrawal_interval = o.last_withdrawal = d.head_block_time();
-          o.spent = spent;
-          o.limit = withdrawal_limit_->limit;
-        });
+        if (withdrawal_limit_)
+        {
+          d.create<withdrawal_limit_object>([&](withdrawal_limit_object &o){
+            o.account = op.account;
+            o.beginning_of_withdrawal_interval = o.last_withdrawal = d.head_block_time();
+            o.spent = spent;
+            o.limit = withdrawal_limit_->limit;
+          });
+        }
       }
       else
       {
-        d.modify(*withdrawal_limit_obj_, [&](withdrawal_limit_object& o){
+          bool check;
+          if (d.head_block_time() >= HARDFORK_BLC_342_TIME)
+            check = d.head_block_time() - withdrawal_limit_obj_->beginning_of_withdrawal_interval > fc::microseconds(static_cast<int64_t>(withdrawal_limit_->duration) * 1000000);
+          else
+            check = d.head_block_time() - withdrawal_limit_obj_->beginning_of_withdrawal_interval > fc::microseconds(withdrawal_limit_->duration * 1000000);
+
+          d.modify(*withdrawal_limit_obj_, [&](withdrawal_limit_object& o){
           o.last_withdrawal = d.head_block_time();
-          if (d.head_block_time() - o.beginning_of_withdrawal_interval > fc::microseconds(withdrawal_limit_->duration * 1000000))
+          if (check)
           {
             o.beginning_of_withdrawal_interval = d.head_block_time();
             o.spent = spent;
@@ -160,6 +178,13 @@ namespace graphene { namespace chain {
   { try {
     const auto& d = db();
 
+    // Deprecate this operation from HARDFORK_BLC_340_DEPRECATE_MINTING_TIME and web euro
+    if (d.head_block_time() >= HARDFORK_BLC_340_DEPRECATE_MINTING_TIME)
+    {
+      const auto& obj = op.holder_object_id(d);
+      FC_ASSERT( obj.asset_id != d.get_web_asset_id(), "Wire out complete is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME).to_iso_string()) );
+    }
+
     FC_ASSERT( op.wire_out_handler == d.get_chain_authorities().wire_out_handler );
 
     holder_ = &op.holder_object_id(d);
@@ -181,6 +206,13 @@ namespace graphene { namespace chain {
   void_result wire_out_with_fee_reject_evaluator::do_evaluate(const wire_out_with_fee_reject_operation& op)
   { try {
     const auto& d = db();
+
+    // Deprecate this operation from HARDFORK_BLC_340_DEPRECATE_MINTING_TIME and web euro
+    if (d.head_block_time() >= HARDFORK_BLC_340_DEPRECATE_MINTING_TIME)
+    {
+      const auto& obj = op.holder_object_id(d);
+      FC_ASSERT( obj.asset_id != d.get_web_asset_id(), "Wire out reject is deprecated from ${s}", ("s", time_point_sec(HARDFORK_BLC_340_DEPRECATE_MINTING_TIME).to_iso_string()) );
+    }
 
     FC_ASSERT( op.wire_out_handler == d.get_chain_authorities().wire_out_handler );
 

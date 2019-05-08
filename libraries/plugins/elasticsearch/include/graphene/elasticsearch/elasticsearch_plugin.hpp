@@ -189,12 +189,12 @@ struct adaptor_struct {
    {
       fc::mutable_variant_object o(op);
       vector<string> keys_to_rename;
-      for (auto i = o.begin(); i != o.end(); ++i)
+      for (auto& i : o)
       {
-         auto& element = (*i).value();
+         auto& element = i.value();
          if (element.is_object())
          {
-            const string& name = (*i).key();
+            const string& name = i.key();
             auto& vo = element.get_object();
             if (vo.contains(name.c_str()))
                keys_to_rename.emplace_back(name);
@@ -237,6 +237,10 @@ struct adaptor_struct {
             if (tmp2.find("current_fees") != tmp2.end())
             {
                tmp2.erase("current_fees");
+               if (tmp2.find("extensions") != tmp2.end())
+               {
+                  tmp2["extensions"] = fc::json::to_string(tmp2["extensions"]);
+               }
                o["new_parameters"] = tmp2;
             }
          }
@@ -254,6 +258,23 @@ struct adaptor_struct {
       {
          o["initializer"] = fc::json::to_string(o["initializer"]);
       }
+      if (o.find("policy") != o.end())
+      {
+         o["policy"] = fc::json::to_string(o["policy"]);
+      }
+      if (o.find("predicates") != o.end())
+      {
+         o["predicates"] = fc::json::to_string(o["predicates"]);
+      }
+      if (o.find("active_special_authority") != o.end())
+      {
+         o["active_special_authority"] = fc::json::to_string(o["active_special_authority"]);
+      }
+      if (o.find("owner_special_authority") != o.end())
+      {
+         o["owner_special_authority"] = fc::json::to_string(o["owner_special_authority"]);
+      }
+
 
       variant v;
       fc::to_variant(o, v, FC_PACK_MAX_DEPTH);

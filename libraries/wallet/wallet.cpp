@@ -71,7 +71,6 @@
 #include <graphene/wallet/api_documentation.hpp>
 #include <graphene/wallet/reflect_util.hpp>
 #include <graphene/debug_witness/debug_api.hpp>
-#include <fc/smart_ref_impl.hpp>
 
 #ifndef WIN32
 # include <sys/types.h>
@@ -1345,6 +1344,25 @@ public:
 
       return sign_transaction(tx, broadcast);
    } FC_CAPTURE_AND_RETHROW( (clearing_enabled)(clearing_interval_time_seconds)(collateral_dascoin)(collateral_webeur)(broadcast) ) }
+
+   signed_transaction daspay_set_use_external_token_price(const string& authority,
+                                                          flat_set<asset_id_type> use_external_token_price,
+                                                          bool broadcast = false)
+   { try {
+       FC_ASSERT( !self.is_locked() );
+
+       daspay_set_use_external_token_price_operation op;
+
+       op.authority = get_account(authority).id;
+       op.use_external_token_price = use_external_token_price;
+
+       signed_transaction tx;
+       tx.operations.push_back(op);
+       set_operation_fees( tx, _remote_db->get_global_properties().parameters.current_fees );
+       tx.validate();
+
+       return sign_transaction(tx, broadcast);
+    } FC_CAPTURE_AND_RETHROW( (authority)(use_external_token_price)(broadcast) ) }
 
    signed_transaction create_das33_project(const string& authority,
                                            const string& name,
@@ -3068,6 +3086,30 @@ public:
        return sign_transaction(tx, broadcast);
    }
 
+   signed_transaction issue_asset2(string to_account, string amount, string reserved, string symbol, string unique_id, bool broadcast)
+   {
+       const auto asset_obj = get_asset(symbol);
+
+       account_object to = get_account(to_account);
+
+       asset_create_issue_request_operation issue_op;
+       issue_op.issuer = asset_obj.issuer;
+       issue_op.receiver = to.id;
+       issue_op.amount =
+           asset_obj.amount_from_string(amount).amount;
+       issue_op.asset_id = asset_obj.id;
+       issue_op.reserved_amount =
+           asset_obj.amount_from_string(reserved).amount;
+       issue_op.unique_id = unique_id;
+
+       signed_transaction tx;
+       tx.operations.push_back(issue_op);
+       set_operation_fees(tx,_remote_db->get_global_properties().parameters.current_fees);
+       tx.validate();
+
+       return sign_transaction(tx, broadcast);
+   }
+
    std::map<string,std::function<string(fc::variant,const fc::variants&)>> get_result_formatters() const
    {
       std::map<string,std::function<string(fc::variant,const fc::variants&)> > m;
@@ -4177,6 +4219,13 @@ vector<asset_reserved> wallet_api::list_account_balances(const string& id)
    return my->_remote_db->get_account_balances(get_account(id).id, flat_set<asset_id_type>());
 }
 
+vector<tethered_accounts_balances_collection> wallet_api::list_tethered_accounts_balances(const string& id)
+{
+   if( auto real_id = detail::maybe_id<account_id_type>(id) )
+      return my->_remote_db->get_tethered_accounts_balances(*real_id, flat_set<asset_id_type>());
+   return my->_remote_db->get_tethered_accounts_balances(get_account(id).id, flat_set<asset_id_type>());
+}
+
 vector<asset_object> wallet_api::list_assets(const string& lowerbound, uint32_t limit)const
 {
    return my->_remote_db->list_assets( lowerbound, limit );
@@ -4314,6 +4363,21 @@ vector<bucket_object> wallet_api::get_market_history( string symbol1, string sym
 vector<limit_order_object> wallet_api::get_limit_orders(string a, string b, uint32_t limit)const
 {
    return my->_remote_db->get_limit_orders(get_asset(a).id, get_asset(b).id, limit);
+}
+
+limit_orders_grouped_by_price wallet_api::get_limit_orders_grouped_by_price(string a, string b, uint32_t limit)const
+{
+   return my->_remote_db->get_limit_orders_grouped_by_price(get_asset(a).id, get_asset(b).id, limit);
+}
+
+limit_orders_grouped_by_price wallet_api::get_limit_orders_grouped_by_price_with_precision(string a, string b, uint32_t limit, uint32_t precision)const
+{
+   return my->_remote_db->get_limit_orders_grouped_by_price_with_precision(get_asset(a).id, get_asset(b).id, limit, precision);
+}
+
+limit_orders_collection_grouped_by_price wallet_api::get_limit_orders_collection_grouped_by_price(string a, string b, uint32_t limit_group, uint32_t limit_per_group)const
+{
+   return my->_remote_db->get_limit_orders_collection_grouped_by_price(get_asset(a).id, get_asset(b).id, limit_group, limit_per_group);
 }
 
 vector<call_order_object> wallet_api::get_call_orders(string a, uint32_t limit)const
@@ -4628,6 +4692,11 @@ signed_transaction wallet_api::issue_asset(string to_account, string amount, str
 signed_transaction wallet_api::issue_webasset(string to_account, string amount, string reserved, string unique_id, bool broadcast)
 {
     return my->issue_webasset(to_account, amount, reserved, unique_id, broadcast);
+}
+
+signed_transaction wallet_api::issue_asset2(string to_account, string amount, string reserved, string symbol, string unique_id, bool broadcast)
+{
+    return my->issue_asset2(to_account, amount, reserved, symbol, unique_id, broadcast);
 }
 
 signed_transaction wallet_api::transfer(string from, string to, string amount,
@@ -5895,6 +5964,11 @@ optional<total_cycles_res> wallet_api::get_total_cycles() const
     return my->_remote_db->get_total_cycles();
 }
 
+optional<queue_projection_res> wallet_api::get_queue_projection() const
+{
+    return my->_remote_db->get_queue_projection();
+}
+
 acc_id_share_t_res wallet_api::get_account_cycle_balance(const string& name_or_id) const
 {
    if( auto real_id = detail::maybe_id<account_id_type>(name_or_id) )
@@ -6116,6 +6190,13 @@ signed_transaction wallet_api::update_daspay_clearing_parameters(const string& a
                                                broadcast);
 }
 
+signed_transaction wallet_api::daspay_set_use_external_token_price(const string& authority,
+                                                                   flat_set<asset_id_type> use_external_token_price,
+                                                                   bool broadcast) const
+{
+    return my->daspay_set_use_external_token_price(authority, use_external_token_price, broadcast);
+}
+
 signed_transaction wallet_api::das33_pledge_asset(const string& account,
                                                   const string& amount,
                                                   const string& symbol,
@@ -6201,6 +6282,11 @@ vector<das33_project_object> wallet_api::get_das33_projects(const string& lower_
 vector<asset> wallet_api::get_amount_of_assets_pledged_to_project(das33_project_id_type project) const
 {
   return my->_remote_db->get_amount_of_assets_pledged_to_project(project);
+}
+
+vector<asset> wallet_api::get_amount_of_assets_pledged_to_project_in_phase(das33_project_id_type project, uint32_t phase) const
+{
+    return my->_remote_db->get_amount_of_assets_pledged_to_project_in_phase(project, phase);
 }
 
 das33_project_tokens_amount wallet_api::get_amount_of_project_tokens_received_for_asset(das33_project_id_type project, asset to_pledge) const

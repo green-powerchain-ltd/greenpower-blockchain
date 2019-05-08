@@ -342,6 +342,9 @@ class wallet_api
        * @returns a list of the given account's balances
        */
       vector<asset_reserved>            list_account_balances(const string& id);
+      
+      vector<tethered_accounts_balances_collection> list_tethered_accounts_balances(const string& id);
+
       /** Lists all assets registered on the blockchain.
        *
        * To list all assets, pass the empty string \c "" for the lowerbound to start
@@ -383,6 +386,9 @@ class wallet_api
       vector<bucket_object>             get_market_history(string symbol, string symbol2, uint32_t bucket)const;
       vector<limit_order_object>        get_limit_orders(string a, string b, uint32_t limit)const;
       vector<call_order_object>         get_call_orders(string a, uint32_t limit)const;
+      limit_orders_grouped_by_price     get_limit_orders_grouped_by_price(string a, string b, uint32_t limit)const;
+      limit_orders_grouped_by_price     get_limit_orders_grouped_by_price_with_precision(string a, string b, uint32_t limit, uint32_t precision)const;
+      limit_orders_collection_grouped_by_price get_limit_orders_collection_grouped_by_price(string a, string b, uint32_t limit_group, uint32_t limit_per_group)const;
       vector<force_settlement_object>   get_settle_orders(string a, uint32_t limit)const;
 
       /** Returns the block chain's slowly-changing settings.
@@ -1108,6 +1114,8 @@ class wallet_api
                                         string unique_id,
                                         bool broadcast = false);
 
+      signed_transaction issue_asset2(string to_account, string amount, string reserved, string symbol, string unique_id, bool broadcast = false);
+
       /** Update the core options on an asset.
        * There are a number of options which all assets in the network use. These options are
        * enumerated in the asset_object::asset_options struct. This command is used to update
@@ -1688,6 +1696,12 @@ class wallet_api
       optional<total_cycles_res> get_total_cycles() const;
 
       /**
+       * Gets amount of cycles held by different types of licenses
+       * @return an object containing breakdown of cycles in the system
+       */
+      optional<queue_projection_res> get_queue_projection() const;
+
+      /**
        * Get the amount of cycles in the account.
        * @param  account Account name or stringified id.
        * @return         Cycle balance of the account.
@@ -1959,6 +1973,16 @@ class wallet_api
                                                            optional<share_type> collateral_webeur,
                                                            bool broadcast) const;
 
+      /**
+       * Sets value of use_external_token_price array
+       * @param authority                authority that is issuing this operation, must be daspay_administrator
+       * @param use_external_token_price new value for array
+       * @param broadcast                true to broadcast the transaction on the network.
+       */
+      signed_transaction daspay_set_use_external_token_price(const string& authority,
+                                                           flat_set<asset_id_type> use_external_token_price,
+                                                           bool broadcast = false) const;
+
 
       ///////////////////////////////
       /// DELAYED OPERATIONS:     ///
@@ -2186,6 +2210,14 @@ class wallet_api
       * @return vector of assets, each with total sum of that asset pledged
       */
       vector<asset> get_amount_of_assets_pledged_to_project(das33_project_id_type project) const;
+
+    /**
+    * @brief Gets a sum of all pledges made to project in a round
+    * @params project id of a project
+    * @params phase number of phase
+    * @return vector of assets, each with total sum of that asset pledged
+    */
+    vector<asset> get_amount_of_assets_pledged_to_project_in_phase(das33_project_id_type project, uint32_t phase) const;
 
       /**
       * @brief Gets the amount of project tokens that a pledger can get for pledging a certain amount of asset
@@ -2445,6 +2477,7 @@ FC_API( graphene::wallet::wallet_api,
         (list_my_accounts)
         (list_accounts)
         (list_account_balances)
+        (list_tethered_accounts_balances)
         (list_assets)
         (get_license_types)
         (import_key)
@@ -2513,6 +2546,9 @@ FC_API( graphene::wallet::wallet_api,
         (normalize_brain_key)
         (get_limit_orders)
         (get_call_orders)
+        (get_limit_orders_grouped_by_price)
+        (get_limit_orders_grouped_by_price_with_precision)
+        (get_limit_orders_collection_grouped_by_price)
         (get_settle_orders)
         (save_wallet_file)
         (serialize_transaction)
@@ -2553,9 +2589,11 @@ FC_API( graphene::wallet::wallet_api,
 
         // Web assets:
         (issue_webasset)
+        (issue_asset2)
 
         // Cycles:
         (get_total_cycles)
+        (get_queue_projection)
         (get_account_cycle_balance)
         (get_full_cycle_balances)
         (get_dascoin_balance)
@@ -2582,6 +2620,7 @@ FC_API( graphene::wallet::wallet_api,
         (daspay_credit_account)
         (get_daspay_authority_for_account)
         (update_daspay_clearing_parameters)
+        (daspay_set_use_external_token_price)
 
         // Das33
         (das33_pledge_asset)
@@ -2597,6 +2636,7 @@ FC_API( graphene::wallet::wallet_api,
         (delete_das33_project)
         (get_das33_projects)
         (get_amount_of_assets_pledged_to_project)
+        (get_amount_of_assets_pledged_to_project_in_phase)
         (get_amount_of_project_tokens_received_for_asset)
         (get_amount_of_asset_needed_for_project_token)
         (das33_set_use_external_btc_price)

@@ -370,6 +370,26 @@ namespace graphene { namespace chain {
       share_type calculate_fee(const fee_parameters_type&) const { return 0; }
     };
 
+    struct daspay_set_use_external_token_price_operation : public base_operation
+    {
+      struct fee_parameters_type { uint64_t fee = 0; };
+      asset fee;
+
+      account_id_type              authority;
+      flat_set<asset_id_type>      use_external_token_price;
+      extensions_type              extensions;
+
+      daspay_set_use_external_token_price_operation() = default;
+
+      explicit daspay_set_use_external_token_price_operation(const account_id_type& authority,
+                                                              const flat_set<asset_id_type>& use_external_token_price)
+                    : authority(authority)
+                    , use_external_token_price(use_external_token_price) {}
+
+      account_id_type fee_payer() const { return authority; }
+      void validate() const;
+    };
+
 } }  // namespace graphene::chain
 
 ////////////////////////////////
@@ -495,5 +515,13 @@ FC_REFLECT( graphene::chain::update_delayed_operations_resolver_parameters_opera
             (authority)
             (delayed_operations_resolver_enabled)
             (delayed_operations_resolver_interval_time_seconds)
+            (extensions)
+          )
+
+FC_REFLECT( graphene::chain::daspay_set_use_external_token_price_operation::fee_parameters_type, (fee) )
+FC_REFLECT( graphene::chain::daspay_set_use_external_token_price_operation,
+            (fee)
+            (authority)
+            (use_external_token_price)
             (extensions)
           )
