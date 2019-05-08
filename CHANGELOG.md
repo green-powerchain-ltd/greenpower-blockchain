@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [2.0.0] - 2019-05-08
+### Added
+ - Hardfork: Web EUR is deprecated
+ - Hardfork: Minting is deprecated
+ - New query: get_limit_orders_grouped_by_price_with_precision
+ - New query: das33 summary 
+ - New flag use external token price in AlliancePay together with new
+ operation which sets it
+ - New tool: bcat
+ - Cli Wallet: new method get limit orders grouped by price
+ - Cli Wallet: new method get limit orders grouped by price with precision
+ - Cli Wallet: new method get limit orders collection grouped by price
+
+### Updated
+ - Withdrawal limit interval calculation is fixed
+ - get_trade_history_for_account query now returns both sells and buys
+ - Elasticsearch plugin merged with Bitshares
+ - Queue projection query updated
+ - Fixed price calculation for AlliancePay
+
 ## [0.5.2] - 2019-03-11
 ### Added
  - Withdrawal limits
