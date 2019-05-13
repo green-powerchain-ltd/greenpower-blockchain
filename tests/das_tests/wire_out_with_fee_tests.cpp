@@ -262,6 +262,9 @@ BOOST_AUTO_TEST_CASE( wire_out_with_fee_342_test )
   wire_out_with_fee(wallet_id, web_asset(500 * DASCOIN_FIAT_ASSET_PRECISION), "BTC", "SOME_BTC_ADDRESS", "debit");
 
   generate_blocks(HARDFORK_BLC_342_TIME + fc::hours(1));
+  wire_out_with_fee(wallet_id, web_asset(500 * DASCOIN_FIAT_ASSET_PRECISION), "BTC", "SOME_BTC_ADDRESS", "debit");
+
+  generate_blocks(HARDFORK_BLC_342_TIME + fc::minutes(110));
   GRAPHENE_REQUIRE_THROW( wire_out_with_fee(wallet_id, web_asset(500 * DASCOIN_FIAT_ASSET_PRECISION), "BTC", "SOME_BTC_ADDRESS", "debit"), fc::exception );
 
 } FC_LOG_AND_RETHROW() }
