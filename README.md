@@ -1,4 +1,4 @@
-DasCoin Blockchain
+GreenPower Blockchain
 ==============
 
 
@@ -9,14 +9,14 @@ DasCoin Blockchain
 * [FAQ](#faq)
 * [License](#license)
 
-DasCoin Blockchain is the techsolutions-ltd blockchain implementation and command-line interface.
+GreenPower Blockchain is the green-powerchain-ltd blockchain implementation and command-line interface.
 
 Getting Started
 ---------------
 Build instructions and additional documentation are available in the
-[wiki](https://github.com/techsolutions-ltd/dascoin-blockchain/wiki).
+[wiki](https://github.com/green-powerchain-ltd/greenpower-blockchain/wiki).
 
-We recommend building on Ubuntu 16.04 LTS (64-bit)
+We recommend building on Ubuntu 18.04 LTS (64-bit)
 
 **Build Dependencies**:
 
@@ -25,8 +25,8 @@ We recommend building on Ubuntu 16.04 LTS (64-bit)
 
 **Build Script:**
 
-    git clone https://github.com/techsolutions-ltd/dascoin-blockchain.git
-    cd dascoin-blockchain
+    git clone https://github.com/green-powerchain-ltd/greenpower-blockchain.git
+    cd greenpower-blockchain
     git checkout master # may substitute "master" with current release tag
     git submodule update --init --recursive
     cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo .
@@ -34,7 +34,7 @@ We recommend building on Ubuntu 16.04 LTS (64-bit)
 
 **Upgrade Script** (prepend to the Build Script above if you built a prior release):
 
-    git remote set-url origin https://github.com/techsolutions-ltd/dascoin-blockchain.git
+    git remote set-url origin https://github.com/green-powerchain-ltd/greenpower-blockchain.git
     git checkout master
     git remote set-head origin --auto
     git pull
@@ -233,5 +233,5 @@ FAQ
  
 License
 -------
-DasCoin Blockchain is under the MIT license. See [LICENSE](https://github.com/techsolutions-ltd/dascoin-blockchain/blob/master/LICENSE.txt)
+GreenPower Blockchain is under the MIT license. See [LICENSE](https://github.com/green-powerchain-ltd/greenpower-blockchain/blob/master/LICENSE.txt)
 for more information.
