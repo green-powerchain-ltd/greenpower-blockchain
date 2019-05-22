@@ -173,32 +173,38 @@ namespace graphene { namespace chain {
 
       set_new_fee_visitor( fee_parameters& p , uint64_t new_fee):param(p),new_fee(new_fee){}
 
-      result_type operator()(  const limit_order_create_operation& op ) const
+      result_type operator()( const limit_order_create_operation& op ) const
       {
          param.get<typename limit_order_create_operation::fee_parameters_type>().fee = new_fee;
          ilog( "limit_order_create_operation new fee = ${p}", ("p", param.get<typename limit_order_create_operation::fee_parameters_type>().fee) );
       }
 
-      result_type operator()(  const transfer_operation& op ) const
+      result_type operator()( const transfer_operation& op ) const
       {
          param.get<typename transfer_operation::fee_parameters_type>().fee = new_fee;
          ilog( "transfer_operation new fee = ${p}", ("p", param.get<typename transfer_operation::fee_parameters_type>().fee) );
       }
 
-      result_type operator()(  const wire_out_with_fee_operation& op ) const
+      result_type operator()( const wire_out_with_fee_operation& op ) const
       {
          param.get<typename wire_out_with_fee_operation::fee_parameters_type>().fee = new_fee;
          ilog( "wire_out_with_fee_operation new fee = ${p}", ("p", param.get<typename wire_out_with_fee_operation::fee_parameters_type>().fee) );
       }
 
-      result_type operator()(  const asset_update_operation& op ) const
+      result_type operator()( const asset_update_operation& op ) const
       {
          param.get<typename asset_update_operation::fee_parameters_type>().fee = new_fee;
          ilog( "asset_update_operation new fee = ${p}", ("p", param.get<typename asset_update_operation::fee_parameters_type>().fee) );
       }
 
+      result_type operator()( const account_update_operation& op ) const
+      {
+         param.get<typename account_update_operation::fee_parameters_type>().fee = new_fee;
+         ilog( "account_update_operation new fee = ${p}", ("p", param.get<typename account_update_operation::fee_parameters_type>().fee) );
+      }
+
       template<typename OpType>
-      result_type operator()(  const OpType& op ) const
+      result_type operator()( const OpType& op ) const
       {
         FC_ASSERT( false, "Undefined call operator for fee change operation in set_new_fee_visitor" );
       }
