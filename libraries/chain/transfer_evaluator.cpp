@@ -143,7 +143,23 @@ void_result transfer_vault_to_wallet_evaluator::do_evaluate(const transfer_vault
 
    // Check if the accounts exist:
    const account_object& from_acc_obj = op.from_vault(d);
-   const account_object& to_acc_obj = op.to_wallet(d);
+   const account_object& to_acc_obj   = op.to_wallet(d);
+   const asset_object&   asset_type   = op.asset_to_transfer.asset_id(d);
+
+   GRAPHENE_ASSERT(
+      is_authorized_asset( d, from_acc_obj, asset_type ),
+      transfer_from_account_not_whitelisted,
+      "'from' account ${from} is not whitelisted for asset ${asset}",
+      ("from",op.from_vault)
+      ("asset",op.asset_to_transfer.asset_id)
+    );
+   GRAPHENE_ASSERT(
+      is_authorized_asset( d, to_acc_obj, asset_type ),
+      transfer_to_account_not_whitelisted,
+      "'to' account ${to} is not whitelisted for asset ${asset}",
+      ("to",op.to_wallet)
+      ("asset",op.asset_to_transfer.asset_id)
+    );
 
    // Must be VAULT --> WALLET:
    FC_ASSERT( from_acc_obj.is_vault(), "Source '${f}' must be a vault account", ("f", from_acc_obj.name) );
@@ -231,7 +247,23 @@ void_result transfer_wallet_to_vault_evaluator::do_evaluate(const transfer_walle
 
    // Check if the accounts exist:
    const account_object& from_acc_obj = op.from_wallet(d);
-   const account_object& to_acc_obj = op.to_vault(d);
+   const account_object& to_acc_obj   = op.to_vault(d);
+   const asset_object&   asset_type   = op.asset_to_transfer.asset_id(d);
+
+   GRAPHENE_ASSERT(
+      is_authorized_asset( d, from_acc_obj, asset_type ),
+      transfer_from_account_not_whitelisted,
+      "'from' account ${from} is not whitelisted for asset ${asset}",
+      ("from",op.from_wallet)
+      ("asset",op.asset_to_transfer.asset_id)
+    );
+    GRAPHENE_ASSERT(
+       is_authorized_asset( d, to_acc_obj, asset_type ),
+       transfer_to_account_not_whitelisted,
+       "'to' account ${to} is not whitelisted for asset ${asset}",
+       ("to",op.to_vault)
+       ("asset",op.asset_to_transfer.asset_id)
+    );
 
    // Must be WALLET --> VAULT:
    FC_ASSERT( from_acc_obj.is_wallet(), "Source '${f}' must be a wallet account", ("f", from_acc_obj.name) );

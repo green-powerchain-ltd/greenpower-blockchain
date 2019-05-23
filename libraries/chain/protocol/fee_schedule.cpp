@@ -203,6 +203,12 @@ namespace graphene { namespace chain {
          ilog( "account_update_operation new fee = ${p}", ("p", param.get<typename account_update_operation::fee_parameters_type>().fee) );
       }
 
+      result_type operator()( const account_whitelist_operation& op ) const
+      {
+         param.get<typename account_whitelist_operation::fee_parameters_type>().fee = new_fee;
+         ilog( "account_whitelist_operation new fee = ${p}", ("p", param.get<typename account_whitelist_operation::fee_parameters_type>().fee) );
+      }
+
       template<typename OpType>
       result_type operator()( const OpType& op ) const
       {
