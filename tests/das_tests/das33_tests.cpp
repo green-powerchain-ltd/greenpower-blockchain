@@ -701,6 +701,91 @@ BOOST_AUTO_TEST_CASE( das33_reject_project_test )
 
 } FC_LOG_AND_RETHROW() }
 
+BOOST_AUTO_TEST_CASE( das33_pledge_price_override_test )
+{ try {
+
+    ACTOR(user);
+    ACTOR(owner);
+    VAULT_ACTOR(vault);
+
+    tether_accounts(user_id, vault_id);
+
+    // Issue a bunch of assets
+    issue_dascoin(vault_id, 100);
+    disable_vault_to_wallet_limit(vault_id);
+    transfer_dascoin_vault_to_wallet(vault_id, user_id, 100 * DASCOIN_DEFAULT_ASSET_PRECISION);
+
+    BOOST_CHECK_EQUAL( get_balance(user_id, get_dascoin_asset_id()), 100 * DASCOIN_DEFAULT_ASSET_PRECISION );
+
+    // Create project token
+    //   max_supply is 1.000.000,00000
+    //   precision is 5
+    asset_id_type test_asset_id = create_new_asset("TEST", 100000000000, 5, price{asset(1),asset(1,asset_id_type(1))});
+
+    // Create a das33 project
+    das33_project_create_operation project_create;
+        project_create.authority       = get_das33_administrator_id();
+        project_create.name            = "test_project0";
+        project_create.owner           = owner_id;
+        project_create.token           = test_asset_id;
+        project_create.discounts       = {{get_dascoin_asset_id(), 60}};
+        project_create.goal_amount_eur = 10000000; // 100.000 with precision 2
+        project_create.min_pledge      = 0;
+        project_create.max_pledge      = 10000000000; // 100.000 with precision 5
+    do_op(project_create);
+
+    das33_project_object project = get_das33_projects()[0];
+
+    // Activate project
+    das33_project_update_operation project_update;
+        project_update.project_id = project.id;
+        project_update.authority  = get_das33_administrator_id();
+        project_update.status     = das33_project_status::active;
+    do_op(project_update);
+
+    // Initial check
+    BOOST_CHECK_EQUAL(get_das33_pledges().size(), 0);
+
+    // Set last dascoin price 1 DASC = 1 EUR
+    set_last_dascoin_price(asset(1 * DASCOIN_DEFAULT_ASSET_PRECISION, get_dascoin_asset_id()) / asset(1 * DASCOIN_FIAT_ASSET_PRECISION, get_web_asset_id()));
+
+    // Pledge DASC
+    do_op_no_balance_check(das33_pledge_asset_operation(user_id, asset{10 * DASCOIN_DEFAULT_ASSET_PRECISION, get_dascoin_asset_id()}, optional<license_type_id_type>{}, project.id));
+
+    // Set price override to 1 DASC = 0.5 EUR
+    das33_project_update_operation project_update_price;
+        project_update_price.project_id = project.id;
+        project_update_price.authority  = get_das33_administrator_id();
+        map<asset_id_type, share_type> price_overrides;
+        price_overrides[get_dascoin_asset_id()] = 50000;
+        project_update_price.extensions.insert(price_overrides);
+    do_op_no_balance_check(project_update_price);
+
+    do_op_no_balance_check(das33_pledge_asset_operation(user_id, asset{10 * DASCOIN_DEFAULT_ASSET_PRECISION, get_dascoin_asset_id()}, optional<license_type_id_type>{}, project.id));
+    BOOST_CHECK_EQUAL(get_das33_pledges().size(), 2);
+
+    // Check pledges
+    vector<das33_pledge_holder_object> pledges = get_das33_pledges();
+    BOOST_CHECK_EQUAL(pledges.size(), 2);
+
+    BOOST_CHECK(pledges[0].pledged.amount          == 1000000); // 10 with precision 5
+    BOOST_CHECK(pledges[0].pledge_remaining.amount == 1000000); // 10 with precision 5
+    BOOST_CHECK(pledges[0].base_expected.amount    == 10000000); // 100 with precision 5
+    BOOST_CHECK(pledges[0].base_remaining.amount   == 10000000); // 100 with precision 5
+    BOOST_CHECK(pledges[0].bonus_expected.amount   == 6666666); // 66.66666 with precision 5
+    BOOST_CHECK(pledges[0].bonus_remaining.amount  == 6666666); // 66.66666 with precision 5
+
+    BOOST_CHECK(pledges[1].pledged.amount          == 1000000); // 10 with precision 5
+    BOOST_CHECK(pledges[1].pledge_remaining.amount == 1000000); // 10 with precision 5
+    BOOST_CHECK(pledges[1].base_expected.amount    == 5000000); // 50 with precision 5
+    BOOST_CHECK(pledges[1].base_remaining.amount   == 5000000); // 50 with precision 5
+    BOOST_CHECK(pledges[1].bonus_expected.amount   == 3333333); // 33.3333 with precision 5
+    BOOST_CHECK(pledges[1].bonus_remaining.amount  == 3333333); // 33.3333 with precision 5
+
+    // Complete project
+    do_op_no_balance_check(das33_distribute_project_pledges_operation(get_das33_administrator_id(), project.id, 0, 10000, 10000, 10000));
+} FC_LOG_AND_RETHROW() }
+
 BOOST_AUTO_TEST_SUITE_END()  // dascoin_tests::das33_tests
 BOOST_AUTO_TEST_SUITE_END()  // dascoin_tests
 

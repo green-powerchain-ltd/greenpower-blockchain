@@ -60,6 +60,31 @@ namespace graphene { namespace chain {
     return result;
   }
 
+  optional<price> calculate_price(asset_id_type asset_id, das33_project_id_type project_id, const database& d)
+  {
+      const auto& project_obj = project_id(d);
+      const auto& price_override_it = project_obj.price_override.find(asset_id);
+
+      // Check if we are in alliance pay project and HF time ...
+      if (asset_id == d.get_dascoin_asset_id()
+              && project_id == das33_project_id_type{3}
+              && d.head_block_time() > HARDFORK_FIX_PLEDGE_PRICE_START
+              && d.head_block_time() < HARDFORK_FIX_PLEDGE_PRICE_END)
+      {
+          // .. if yes set fixed price to 0.1 We
+          return price{asset{100000, d.get_dascoin_asset_id()}, asset{10, d.get_web_asset_id()}};
+      }
+      else if (price_override_it != project_obj.price_override.end())
+      {
+          return price{asset{std::pow(10, asset_id(d).precision) * 1000, asset_id}, asset{(*price_override_it).second, d.get_web_asset_id()}};
+      }
+      else
+      {
+          // .. otherwise get price from db
+          return d.get_price_in_web_eur(asset_id);
+      }
+  }
+
   typedef boost::multiprecision::uint128_t uint128_t;
 
   asset asset_price_multiply ( const asset& a, int64_t precision, const price& b, const price& c )
@@ -303,6 +328,15 @@ namespace graphene { namespace chain {
         {
            ext.visit(das33_project_visitor{dpo.report});
         }
+
+        auto new_price_override_it = std::find_if(op.extensions.begin(), op.extensions.end(),
+                                         [](const das33_project_update_operation::das33_project_extension& ext){
+                                               return ext.which() == das33_project_update_operation::das33_project_extension::tag< map<asset_id_type, share_type> >::value;
+                                        });
+        if (new_price_override_it != op.extensions.end())
+        {
+            dpo.price_override = (*new_price_override_it).get<map<asset_id_type, share_type>>();
+        }
       });
 
       return {};
@@ -382,7 +416,8 @@ namespace graphene { namespace chain {
     share_type precision = precision_modifier(op.pledged.asset_id(d), d.get_web_asset_id()(d));
     total.asset_id = project_obj.token_id;
 
-    const auto& conversion_price = d.get_price_in_web_eur(op.pledged.asset_id);
+    optional<price> conversion_price = calculate_price(op.pledged.asset_id, op.project_id, d);
+
     FC_ASSERT(conversion_price.valid(), "There is no proper price for ${asset}", ("asset", op.pledged.asset_id));
 
     price_at_evaluation = *conversion_price;

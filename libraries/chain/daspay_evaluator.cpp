@@ -28,6 +28,24 @@
 
 namespace graphene { namespace chain {
 
+  bool get_override_prices_in_eur(const asset_id_type& token_id, flat_set<share_type>& prices, uint32_t max_prices, const database& d)
+  {
+      const auto& gpo = d.get_global_properties();
+      const auto& price_override_it = gpo.daspay_parameters.price_override.find(token_id);
+      if (price_override_it != gpo.daspay_parameters.price_override.end())
+      {
+          for (uint i = 0; i < max_prices; ++i) {
+              prices.insert((*price_override_it).second);
+          }
+          return true;
+      }
+      else
+      {
+          return false;
+      }
+
+  }
+
   void get_external_token_prices_in_eur(const asset_id_type& token_id, flat_set<share_type>& prices, bool ascending, uint32_t max_prices, const database& d)
   {
       auto& token = d.get(token_id);
@@ -311,15 +329,19 @@ namespace graphene { namespace chain {
     if (d.head_block_time() > HARDFORK_BLC_156_TIME)
     {
       flat_set<share_type> buy_prices;
-      const auto& use_external_price_for_token = d.get_global_properties().daspay_parameters.use_external_token_price;
-      if (std::find(use_external_price_for_token.begin(), use_external_price_for_token.end(), d.get_dascoin_asset_id()) != use_external_price_for_token.end())
+      if (!get_override_prices_in_eur(d.get_dascoin_asset_id(), buy_prices, 1, d))
       {
-        get_external_token_prices_in_eur(d.get_dascoin_asset_id(), buy_prices, true, 1, d);
+          const auto& use_external_price_for_token = d.get_global_properties().daspay_parameters.use_external_token_price;
+          if (std::find(use_external_price_for_token.begin(), use_external_price_for_token.end(), d.get_dascoin_asset_id()) != use_external_price_for_token.end())
+          {
+            get_external_token_prices_in_eur(d.get_dascoin_asset_id(), buy_prices, true, 1, d);
+          }
+          else
+          {
+            d.get_groups_of_limit_order_prices(d.get_web_asset_id(), d.get_dascoin_asset_id(), buy_prices, false, 1);
+          }
       }
-      else
-      {
-        d.get_groups_of_limit_order_prices(d.get_web_asset_id(), d.get_dascoin_asset_id(), buy_prices, false, 1);
-      }
+
       FC_ASSERT( !buy_prices.empty(), "Cannot debit since there are no buy limit orders" );
       if (d.head_block_time() >= HARDFORK_FIX_DASPAY_PRICE_TIME)
         _to_debit = asset{ tmp.amount * 1000 * DASCOIN_DEFAULT_ASSET_PRECISION / *(buy_prices.begin()), d.get_dascoin_asset_id() };
@@ -381,15 +403,19 @@ namespace graphene { namespace chain {
     if (d.head_block_time() >= HARDFORK_BLC_156_TIME)
     {
       flat_set<share_type> sell_prices;
-      const auto& use_external_price_for_token = d.get_global_properties().daspay_parameters.use_external_token_price;
-      if (std::find(use_external_price_for_token.begin(), use_external_price_for_token.end(), d.get_dascoin_asset_id()) != use_external_price_for_token.end())
+      if (!get_override_prices_in_eur(d.get_dascoin_asset_id(), sell_prices, 1, d))
       {
-        get_external_token_prices_in_eur(d.get_dascoin_asset_id(), sell_prices, true, 1, d);
+          const auto& use_external_price_for_token = d.get_global_properties().daspay_parameters.use_external_token_price;
+          if (std::find(use_external_price_for_token.begin(), use_external_price_for_token.end(), d.get_dascoin_asset_id()) != use_external_price_for_token.end())
+          {
+            get_external_token_prices_in_eur(d.get_dascoin_asset_id(), sell_prices, true, 1, d);
+          }
+          else
+          {
+            d.get_groups_of_limit_order_prices(d.get_dascoin_asset_id(), d.get_web_asset_id(), sell_prices, true, 1);
+          }
       }
-      else
-      {
-        d.get_groups_of_limit_order_prices(d.get_dascoin_asset_id(), d.get_web_asset_id(), sell_prices, true, 1);
-      }
+
       FC_ASSERT( !sell_prices.empty(), "Cannot credit since there are no sell limit orders ${a}", ("a", sell_prices.size()) );
       if (d.head_block_time() >= HARDFORK_FIX_DASPAY_PRICE_TIME)
         _to_credit = asset { tmp.amount * 1000 * DASCOIN_DEFAULT_ASSET_PRECISION / *(sell_prices.begin()), d.get_dascoin_asset_id() };
@@ -449,6 +475,16 @@ namespace graphene { namespace chain {
       CHECK_AND_SET_OPT(gpo.daspay_parameters.clearing_interval_time_seconds, op.clearing_interval_time_seconds);
       CHECK_AND_SET_OPT(gpo.daspay_parameters.collateral_dascoin, op.collateral_dascoin);
       CHECK_AND_SET_OPT(gpo.daspay_parameters.collateral_webeur, op.collateral_webeur);
+
+      auto new_price_override_it = std::find_if(op.extensions.begin(), op.extensions.end(),
+                                       [](const update_daspay_clearing_parameters_operation::daspay_parameters_extension& ext){
+                                             return ext.which() == update_daspay_clearing_parameters_operation::daspay_parameters_extension::tag< map<asset_id_type, share_type> >::value;
+                                      });
+      if (new_price_override_it != op.extensions.end())
+      {
+        gpo.daspay_parameters.price_override = (*new_price_override_it).get<map<asset_id_type, share_type>>();
+      }
+
     });
 
     return {};

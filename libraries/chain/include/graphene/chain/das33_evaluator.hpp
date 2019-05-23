@@ -170,5 +170,6 @@ struct das33_project_visitor
 
   asset asset_price_multiply ( const asset& a, int64_t precision, const price& b, const price& c );
   share_type precision_modifier(asset_object a, asset_object b);
+  optional<price> calculate_price(asset_id_type asset_id, das33_project_id_type project_id, const database& d);
 
 } }  // namespace graphene::chain
