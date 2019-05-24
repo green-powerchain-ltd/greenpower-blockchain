@@ -756,8 +756,8 @@ BOOST_AUTO_TEST_CASE( das33_pledge_price_override_test )
     das33_project_update_operation project_update_price;
         project_update_price.project_id = project.id;
         project_update_price.authority  = get_das33_administrator_id();
-        map<asset_id_type, share_type> price_overrides;
-        price_overrides[get_dascoin_asset_id()] = 50000;
+        map<asset_id_type, price> price_overrides;
+        price_overrides[get_dascoin_asset_id()] = asset(10 * DASCOIN_DEFAULT_ASSET_PRECISION, get_dascoin_asset_id()) / asset(5 * DASCOIN_FIAT_ASSET_PRECISION, get_web_asset_id());
         project_update_price.extensions.insert(price_overrides);
     do_op_no_balance_check(project_update_price);
 

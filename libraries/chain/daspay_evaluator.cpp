@@ -28,22 +28,25 @@
 
 namespace graphene { namespace chain {
 
-  bool get_override_prices_in_eur(const asset_id_type& token_id, flat_set<share_type>& prices, uint32_t max_prices, const database& d)
+  bool get_override_prices_in_eur(const asset_id_type& token_id, flat_set<share_type>& prices, bool ascending, uint32_t max_prices, const database& d)
   {
+      auto& token = d.get(token_id);
       const auto& gpo = d.get_global_properties();
+      double coefficient = asset::scaled_precision(token.precision).value * 1.0 / asset::scaled_precision(d.get_web_asset().precision).value;
       const auto& price_override_it = gpo.daspay_parameters.price_override.find(token_id);
       if (price_override_it != gpo.daspay_parameters.price_override.end())
       {
-          for (uint i = 0; i < max_prices; ++i) {
-              prices.insert((*price_override_it).second);
-          }
-          return true;
+        double price = ascending ? 1 / (*price_override_it).second.to_real() : (*price_override_it).second.to_real();
+        auto p = round((ascending ? price * coefficient : price / coefficient) * DASCOIN_DEFAULT_ASSET_PRECISION);
+        for (uint i = 0; i < max_prices; ++i) {
+            prices.insert(static_cast<share_type>(p));
+        }
+        return true;
       }
       else
       {
           return false;
       }
-
   }
 
   void get_external_token_prices_in_eur(const asset_id_type& token_id, flat_set<share_type>& prices, bool ascending, uint32_t max_prices, const database& d)
@@ -329,7 +332,7 @@ namespace graphene { namespace chain {
     if (d.head_block_time() > HARDFORK_BLC_156_TIME)
     {
       flat_set<share_type> buy_prices;
-      if (!get_override_prices_in_eur(d.get_dascoin_asset_id(), buy_prices, 1, d))
+      if (!get_override_prices_in_eur(d.get_dascoin_asset_id(), buy_prices, true, 1, d))
       {
           const auto& use_external_price_for_token = d.get_global_properties().daspay_parameters.use_external_token_price;
           if (std::find(use_external_price_for_token.begin(), use_external_price_for_token.end(), d.get_dascoin_asset_id()) != use_external_price_for_token.end())
@@ -403,7 +406,7 @@ namespace graphene { namespace chain {
     if (d.head_block_time() >= HARDFORK_BLC_156_TIME)
     {
       flat_set<share_type> sell_prices;
-      if (!get_override_prices_in_eur(d.get_dascoin_asset_id(), sell_prices, 1, d))
+      if (!get_override_prices_in_eur(d.get_dascoin_asset_id(), sell_prices, true, 1, d))
       {
           const auto& use_external_price_for_token = d.get_global_properties().daspay_parameters.use_external_token_price;
           if (std::find(use_external_price_for_token.begin(), use_external_price_for_token.end(), d.get_dascoin_asset_id()) != use_external_price_for_token.end())
@@ -478,11 +481,11 @@ namespace graphene { namespace chain {
 
       auto new_price_override_it = std::find_if(op.extensions.begin(), op.extensions.end(),
                                        [](const update_daspay_clearing_parameters_operation::daspay_parameters_extension& ext){
-                                             return ext.which() == update_daspay_clearing_parameters_operation::daspay_parameters_extension::tag< map<asset_id_type, share_type> >::value;
+                                             return ext.which() == update_daspay_clearing_parameters_operation::daspay_parameters_extension::tag< map<asset_id_type, price> >::value;
                                       });
       if (new_price_override_it != op.extensions.end())
       {
-        gpo.daspay_parameters.price_override = (*new_price_override_it).get<map<asset_id_type, share_type>>();
+        gpo.daspay_parameters.price_override = (*new_price_override_it).get<map<asset_id_type, price>>();
       }
 
     });

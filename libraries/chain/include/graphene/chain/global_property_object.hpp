@@ -63,7 +63,7 @@ namespace graphene { namespace chain {
            share_type collateral_dascoin = DASPAY_DEFAULT_CLEARING_COLLATERAL_DASC; ///< by default set to 0
            share_type collateral_webeur = DASPAY_DEFAULT_CLEARING_COLLATERAL_WEBEUR; ///< by default set to 0
            flat_set<asset_id_type> use_external_token_price{};
-           map<asset_id_type, share_type> price_override{};
+           map<asset_id_type, price> price_override{};
          };
          daspay daspay_parameters;
 

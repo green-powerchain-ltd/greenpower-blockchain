@@ -59,7 +59,7 @@ namespace graphene { namespace chain {
     share_type                     phase_limit;
     time_point_sec                 phase_end;
     vector<string>                 report;
-    map<asset_id_type, share_type> price_override;
+    map<asset_id_type, price>      price_override;
 
     das33_project_object() = default;
     explicit das33_project_object(string name, account_id_type owner, asset_id_type token, share_type goal_amount_eur,

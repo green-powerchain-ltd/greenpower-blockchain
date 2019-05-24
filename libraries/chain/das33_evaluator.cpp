@@ -74,9 +74,18 @@ namespace graphene { namespace chain {
           // .. if yes set fixed price to 0.1 We
           return price{asset{100000, d.get_dascoin_asset_id()}, asset{10, d.get_web_asset_id()}};
       }
+      else if (asset_id == d.get_dascoin_asset_id()
+               && project_id == das33_project_id_type{2}
+               && d.head_block_time() > HARDFORK_FIX_PLEDGE_PRICE_START
+               && d.head_block_time() < HARDFORK_FIX_PLEDGE_PRICE_END)
+      {
+          // .. or if we are in Greenstorc and HF time set fixed price to 0.0188 We
+          return price{asset{10000000, d.get_dascoin_asset_id()}, asset{188, d.get_web_asset_id()}};
+      }
       else if (price_override_it != project_obj.price_override.end())
       {
-          return price{asset{std::pow(10, asset_id(d).precision) * 1000, asset_id}, asset{(*price_override_it).second, d.get_web_asset_id()}};
+          // ... or if we have price override, use that
+          return (*price_override_it).second;
       }
       else
       {
@@ -331,11 +340,11 @@ namespace graphene { namespace chain {
 
         auto new_price_override_it = std::find_if(op.extensions.begin(), op.extensions.end(),
                                          [](const das33_project_update_operation::das33_project_extension& ext){
-                                               return ext.which() == das33_project_update_operation::das33_project_extension::tag< map<asset_id_type, share_type> >::value;
+                                               return ext.which() == das33_project_update_operation::das33_project_extension::tag< map<asset_id_type, price> >::value;
                                         });
         if (new_price_override_it != op.extensions.end())
         {
-            dpo.price_override = (*new_price_override_it).get<map<asset_id_type, share_type>>();
+            dpo.price_override = (*new_price_override_it).get<map<asset_id_type, price>>();
         }
       });
 
@@ -424,14 +433,34 @@ namespace graphene { namespace chain {
     base = asset_price_multiply(op.pledged, precision.value, price_at_evaluation, project_obj.token_price);
 
     // Assure that pledge amount is above minimum
-    FC_ASSERT(base.amount >= project_obj.min_pledge, "Can not pledge: must buy at least ${min} tokens", ("min", project_obj.min_pledge));
+    if (!(op.pledged.asset_id == d.get_dascoin_asset_id()
+                   && op.project_id == das33_project_id_type{2}
+                   && d.head_block_time() > HARDFORK_FIX_PLEDGE_PRICE_START
+                   && d.head_block_time() < HARDFORK_FIX_PLEDGE_PRICE_END))
+    {
+        FC_ASSERT(base.amount >= project_obj.min_pledge, "Can not pledge: must buy at least ${min} tokens", ("min", project_obj.min_pledge));
+    }
+
 
     // Assure that pledge amount is below maximum for current user
     auto previous_pledges = users_total_pledges_in_round(op.account_id, op.project_id, project_obj.phase_number, d);
-    FC_ASSERT( previous_pledges + base.amount <= project_obj.max_pledge,
-              "Can not buy more then ${max} tokens per phase and you already pledged for ${previous} in this phase.",
-              ("max", project_obj.max_pledge)
-              ("previous", previous_pledges));
+    if (op.pledged.asset_id == d.get_dascoin_asset_id()
+            && op.project_id == das33_project_id_type{3}
+            && d.head_block_time() > HARDFORK_FIX_PLEDGE_PRICE_START
+            && d.head_block_time() < HARDFORK_FIX_PLEDGE_PRICE_END)
+    {
+        FC_ASSERT( previous_pledges + base.amount <= 100000000000000,
+                  "Can not buy more then ${max} tokens per phase and you already pledged for ${previous} in this phase.",
+                  ("max", project_obj.max_pledge)
+                  ("previous", previous_pledges));
+    }
+    else
+    {
+        FC_ASSERT( previous_pledges + base.amount <= project_obj.max_pledge,
+                  "Can not buy more then ${max} tokens per phase and you already pledged for ${previous} in this phase.",
+                  ("max", project_obj.max_pledge)
+                  ("previous", previous_pledges));
+    }
 
     // Calculate expected amount with discounts
     auto discount_iterator = project_obj.discounts.find(op.pledged.asset_id);

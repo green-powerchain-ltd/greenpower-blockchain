@@ -326,7 +326,7 @@ namespace graphene { namespace chain {
       optional<share_type> collateral_dascoin;
       optional<share_type> collateral_webeur;
 
-      using daspay_parameters_extension = static_variant<void_t, map<asset_id_type, share_type>>;
+      using daspay_parameters_extension = static_variant<void_t, map<asset_id_type, price>>;
       using daspay_parameters_extension_type = flat_set<daspay_parameters_extension>;
       daspay_parameters_extension_type extensions;
 

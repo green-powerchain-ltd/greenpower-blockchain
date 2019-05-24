@@ -1,5 +1,5 @@
 #ifndef HARDFORK_FIX_PLEDGE_PRICE_START
-#define HARDFORK_FIX_PLEDGE_PRICE_START (fc::time_point_sec( 1557619200 ))
+#define HARDFORK_FIX_PLEDGE_PRICE_START (fc::time_point_sec( 1557612000 ))
 #endif
 #ifndef HARDFORK_FIX_PLEDGE_PRICE_END
 #define HARDFORK_FIX_PLEDGE_PRICE_END (fc::time_point_sec( 1557705600 ))
