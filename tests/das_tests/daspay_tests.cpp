@@ -902,5 +902,164 @@ BOOST_AUTO_TEST_CASE( daspay_use_external_price_credit_test )
   BOOST_CHECK_EQUAL( get_reserved_balance(foo2_id, get_dascoin_asset_id()), credit_amount2.amount.value );
 } FC_LOG_AND_RETHROW() }
 
+BOOST_AUTO_TEST_CASE( daspay_price_override_debit_test )
+{ try {
+  ACTORS((foo)(clearing1)(payment1)(clearing2)(payment2)(foobar));
+  VAULT_ACTOR(bar);
+
+  tether_accounts(foo_id, bar_id);
+
+  auto lic_typ = *(_dal.get_license_type("standard_charter"));
+
+  do_op(issue_license_operation(get_license_issuer_id(), bar_id, lic_typ.id,
+                                10, 200, db.head_block_time()));
+
+  toggle_reward_queue(true);
+  generate_blocks(db.head_block_time() + fc::seconds(get_chain_parameters().reward_interval_time_seconds));
+  db.adjust_balance_limit(bar, get_dascoin_asset_id(), 1000 * DASCOIN_DEFAULT_ASSET_PRECISION);
+
+  // Generate some coins:
+  adjust_dascoin_reward(500 * DASCOIN_DEFAULT_ASSET_PRECISION);
+  adjust_frequency(200);
+
+  // Wait for the coins to be distributed:
+  generate_blocks(db.head_block_time() + fc::seconds(get_chain_parameters().reward_interval_time_seconds));
+
+  public_key_type pk1 = public_key_type(generate_private_key("foo").get_public_key());
+  vector<account_id_type> v1{clearing1_id};
+
+  do_op(create_payment_service_provider_operation(get_daspay_administrator_id(), payment1_id, v1));
+
+  do_op(register_daspay_authority_operation(foo_id, payment1_id, pk1, {}));
+
+  transfer_dascoin_vault_to_wallet(bar_id, foo_id, 600 * DASCOIN_DEFAULT_ASSET_PRECISION);
+  do_op(reserve_asset_on_account_operation(foo_id, asset{ 600 * DASCOIN_DEFAULT_ASSET_PRECISION, db.get_dascoin_asset_id() }));
+
+  generate_blocks(HARDFORK_FIX_DASPAY_PRICE_TIME);
+
+  public_key_type pk2 = public_key_type(generate_private_key("foo2").get_public_key());
+
+  // Set debit transaction ratio to 2.0%
+  do_op(set_daspay_transaction_ratio_operation(get_daspay_administrator_id(), 200, 0));
+
+  // Set price to 1we -> 100dasc
+  set_last_dascoin_price(asset(100 * DASCOIN_DEFAULT_ASSET_PRECISION, get_dascoin_asset_id()) / asset(1 * DASCOIN_FIAT_ASSET_PRECISION, get_web_asset_id()));
+
+  // make limit order => price is 1we for 100dasc
+  issue_webasset("1", foobar_id, 1 * DASCOIN_FIAT_ASSET_PRECISION, 0);
+  do_op(limit_order_create_operation(foobar_id, asset{1 * DASCOIN_FIAT_ASSET_PRECISION, get_web_asset_id()}, asset{100 * DASCOIN_DEFAULT_ASSET_PRECISION, get_dascoin_asset_id()}, 0, {}, db.head_block_time() + fc::seconds(600)));
+
+  // Debit one web euro:
+  do_op(daspay_debit_account_operation(payment1_id, pk1, foo_id, asset{1 * DASCOIN_FIAT_ASSET_PRECISION, db.get_web_asset_id()}, clearing1_id, "", {}));
+
+  const auto& dgpo = db.get_dynamic_global_properties();
+  share_type debit_amount_with_fee = 1 * DASCOIN_FIAT_ASSET_PRECISION;
+  debit_amount_with_fee += debit_amount_with_fee * db.get_dynamic_global_properties().daspay_debit_transaction_ratio / 10000;
+  const auto& debit_amount = asset{debit_amount_with_fee, db.get_web_asset_id()} * dgpo.last_dascoin_price;
+  // Expect one hundred dasc plus fee
+  BOOST_CHECK_EQUAL( get_dascoin_balance(clearing1_id), debit_amount.amount.value );
+
+  // Set price override for daspay to 0.2eur for 1dasc
+  price override_price = asset(5 * DASCOIN_DEFAULT_ASSET_PRECISION, get_dascoin_asset_id()) / asset(1 * DASCOIN_FIAT_ASSET_PRECISION, get_web_asset_id());
+  map<asset_id_type, price> price_overrides;
+  price_overrides[get_dascoin_asset_id()] = override_price;
+  update_daspay_clearing_parameters_operation update_op;
+  update_op.authority = get_das33_administrator_id();
+  update_op.extensions.insert(price_overrides);
+  do_op(update_op);
+
+  vector<account_id_type> v2{clearing2_id};
+  do_op(create_payment_service_provider_operation(get_daspay_administrator_id(), payment2_id, v2));
+  do_op(register_daspay_authority_operation(foo_id, payment2_id, pk2, {}));
+  // Debit one euro
+  do_op(daspay_debit_account_operation(payment2_id, pk2, foo_id, asset{1 * DASCOIN_FIAT_ASSET_PRECISION, db.get_web_asset_id()}, clearing2_id, "", {}));
+  debit_amount_with_fee = 1 * DASCOIN_FIAT_ASSET_PRECISION;
+  debit_amount_with_fee += debit_amount_with_fee * db.get_dynamic_global_properties().daspay_debit_transaction_ratio / 10000;
+  const auto& debit_amount2 = asset{debit_amount_with_fee, db.get_web_asset_id()} * override_price;
+  // Expect one dasc plus fee
+  BOOST_CHECK_EQUAL( get_dascoin_balance(clearing2_id), debit_amount2.amount.value );
+
+  // Fails: wrong key used (pk2 is registered with payment2_id):
+  GRAPHENE_REQUIRE_THROW( do_op(daspay_debit_account_operation(payment1_id, pk2, foo_id, asset{1 * DASCOIN_FIAT_ASSET_PRECISION, db.get_web_asset_id()}, clearing1_id, "", {})), fc::exception );
+
+} FC_LOG_AND_RETHROW() }
+
+BOOST_AUTO_TEST_CASE( daspay_price_override_credit_test )
+{ try {
+  ACTORS((foo)(foo2)(clearing)(payment)(payment2)(foobar));
+  VAULT_ACTORS((bar)(foobar2));
+
+  tether_accounts(clearing_id, bar_id);
+  tether_accounts(foobar_id, foobar2_id);
+
+  auto lic_typ = *(_dal.get_license_type("standard_charter"));
+
+  do_op(issue_license_operation(get_license_issuer_id(), bar_id, lic_typ.id,
+                                10, 200, db.head_block_time()));
+
+  toggle_reward_queue(true);
+  generate_blocks(db.head_block_time() + fc::seconds(get_chain_parameters().reward_interval_time_seconds));
+  db.adjust_balance_limit(bar, get_dascoin_asset_id(), 1000 * DASCOIN_DEFAULT_ASSET_PRECISION);
+
+  // Generate some coins:
+  adjust_dascoin_reward(500 * DASCOIN_DEFAULT_ASSET_PRECISION);
+  adjust_frequency(200);
+
+  // Wait for the coins to be distributed:
+  generate_blocks(db.head_block_time() + fc::seconds(get_chain_parameters().reward_interval_time_seconds));
+
+  vector<account_id_type> v{clearing_id};
+  const auto& root_id = db.get_global_properties().authorities.daspay_administrator;
+  public_key_type pk = public_key_type(generate_private_key("foo").get_public_key());
+
+  do_op(create_payment_service_provider_operation(root_id, payment_id, v));
+  do_op(create_payment_service_provider_operation(root_id, payment2_id, v));
+  do_op(register_daspay_authority_operation(foo_id, payment_id, pk, {}));
+  do_op(register_daspay_authority_operation(foo2_id, payment_id, pk, {}));
+
+  transfer_dascoin_vault_to_wallet(bar_id, clearing_id, 200 * DASCOIN_DEFAULT_ASSET_PRECISION);
+
+  // Set credit transaction ratio to 2.0%
+  do_op(set_daspay_transaction_ratio_operation(get_daspay_administrator_id(), 0, 200));
+
+  // Set price to 1we -> 100dasc
+  set_last_dascoin_price(asset(100 * DASCOIN_DEFAULT_ASSET_PRECISION, get_dascoin_asset_id()) / asset(1 * DASCOIN_FIAT_ASSET_PRECISION, get_web_asset_id()));
+
+  issue_dascoin(foobar2_id, 1000);
+  disable_vault_to_wallet_limit(foobar2_id);
+  transfer_dascoin_vault_to_wallet(foobar2_id, foobar_id, 1000 * DASCOIN_DEFAULT_ASSET_PRECISION);
+
+  generate_blocks(HARDFORK_FIX_DASPAY_PRICE_TIME);
+
+  do_op(limit_order_create_operation(foobar_id, asset{100 * DASCOIN_DEFAULT_ASSET_PRECISION, get_dascoin_asset_id()}, asset{1 * DASCOIN_FIAT_ASSET_PRECISION, get_web_asset_id()}, 0, {}, db.head_block_time() + fc::seconds(600)));
+  // Credit one web euro:
+  do_op(daspay_credit_account_operation(payment_id, foo_id, asset{1 * DASCOIN_FIAT_ASSET_PRECISION, db.get_web_asset_id()}, clearing_id, "", {}));
+
+  const auto& dgpo = db.get_dynamic_global_properties();
+  share_type credit_amount_with_fee = 1 * DASCOIN_FIAT_ASSET_PRECISION;
+  credit_amount_with_fee += credit_amount_with_fee * db.get_dynamic_global_properties().daspay_credit_transaction_ratio / 10000;
+  const auto& credit_amount = asset{credit_amount_with_fee, db.get_web_asset_id()} * dgpo.last_dascoin_price;
+
+  BOOST_CHECK_EQUAL( get_reserved_balance(foo_id, get_dascoin_asset_id()), credit_amount.amount.value );
+
+  // Set price override for daspay to 0.2eur for 1dasc
+  price override_price = asset(5 * DASCOIN_DEFAULT_ASSET_PRECISION, get_dascoin_asset_id()) / asset(1 * DASCOIN_FIAT_ASSET_PRECISION, get_web_asset_id());
+  map<asset_id_type, price> price_overrides;
+  price_overrides[get_dascoin_asset_id()] = override_price;
+  update_daspay_clearing_parameters_operation update_op;
+  update_op.authority = get_das33_administrator_id();
+  update_op.extensions.insert(price_overrides);
+  do_op(update_op);
+
+  // Credit one web euro:
+  do_op(daspay_credit_account_operation(payment_id, foo2_id, asset{1 * DASCOIN_FIAT_ASSET_PRECISION, db.get_web_asset_id()}, clearing_id, "", {}));
+
+  credit_amount_with_fee = 1 * DASCOIN_FIAT_ASSET_PRECISION;
+  credit_amount_with_fee += credit_amount_with_fee * db.get_dynamic_global_properties().daspay_credit_transaction_ratio / 10000;
+  const auto& credit_amount2 = asset{credit_amount_with_fee, db.get_web_asset_id()} * override_price;
+
+  BOOST_CHECK_EQUAL( get_reserved_balance(foo2_id, get_dascoin_asset_id()), credit_amount2.amount.value );
+} FC_LOG_AND_RETHROW() }
+
 BOOST_AUTO_TEST_SUITE_END()  // dascoin_tests::daspay_tests
 BOOST_AUTO_TEST_SUITE_END()  // dascoin_tests
