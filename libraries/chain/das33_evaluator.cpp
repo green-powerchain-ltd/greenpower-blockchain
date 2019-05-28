@@ -60,6 +60,40 @@ namespace graphene { namespace chain {
     return result;
   }
 
+  optional<price> calculate_price(asset_id_type asset_id, das33_project_id_type project_id, const database& d)
+  {
+      const auto& project_obj = project_id(d);
+      const auto& price_override_it = project_obj.price_override.find(asset_id);
+
+      // Check if we are in alliance pay project and HF time ...
+      if (asset_id == d.get_dascoin_asset_id()
+              && project_id == das33_project_id_type{3}
+              && d.head_block_time() > HARDFORK_FIX_PLEDGE_PRICE_START
+              && d.head_block_time() < HARDFORK_FIX_PLEDGE_PRICE_END)
+      {
+          // .. if yes set fixed price to 0.1 We
+          return price{asset{100000, d.get_dascoin_asset_id()}, asset{10, d.get_web_asset_id()}};
+      }
+      else if (asset_id == d.get_dascoin_asset_id()
+               && project_id == das33_project_id_type{2}
+               && d.head_block_time() > HARDFORK_FIX_PLEDGE_PRICE_START
+               && d.head_block_time() < HARDFORK_FIX_PLEDGE_PRICE_END)
+      {
+          // .. or if we are in Greenstorc and HF time set fixed price to 0.0188 We
+          return price{asset{10000000, d.get_dascoin_asset_id()}, asset{188, d.get_web_asset_id()}};
+      }
+      else if (price_override_it != project_obj.price_override.end())
+      {
+          // ... or if we have price override, use that
+          return (*price_override_it).second;
+      }
+      else
+      {
+          // .. otherwise get price from db
+          return d.get_price_in_web_eur(asset_id);
+      }
+  }
+
   typedef boost::multiprecision::uint128_t uint128_t;
 
   asset asset_price_multiply ( const asset& a, int64_t precision, const price& b, const price& c )
@@ -303,6 +337,15 @@ namespace graphene { namespace chain {
         {
            ext.visit(das33_project_visitor{dpo.report});
         }
+
+        auto new_price_override_it = std::find_if(op.extensions.begin(), op.extensions.end(),
+                                         [](const das33_project_update_operation::das33_project_extension& ext){
+                                               return ext.which() == das33_project_update_operation::das33_project_extension::tag< map<asset_id_type, price> >::value;
+                                        });
+        if (new_price_override_it != op.extensions.end())
+        {
+            dpo.price_override = (*new_price_override_it).get<map<asset_id_type, price>>();
+        }
       });
 
       return {};
@@ -382,21 +425,42 @@ namespace graphene { namespace chain {
     share_type precision = precision_modifier(op.pledged.asset_id(d), d.get_web_asset_id()(d));
     total.asset_id = project_obj.token_id;
 
-    const auto& conversion_price = d.get_price_in_web_eur(op.pledged.asset_id);
+    optional<price> conversion_price = calculate_price(op.pledged.asset_id, op.project_id, d);
+
     FC_ASSERT(conversion_price.valid(), "There is no proper price for ${asset}", ("asset", op.pledged.asset_id));
 
     price_at_evaluation = *conversion_price;
     base = asset_price_multiply(op.pledged, precision.value, price_at_evaluation, project_obj.token_price);
 
     // Assure that pledge amount is above minimum
-    FC_ASSERT(base.amount >= project_obj.min_pledge, "Can not pledge: must buy at least ${min} tokens", ("min", project_obj.min_pledge));
+    if (!(op.pledged.asset_id == d.get_dascoin_asset_id()
+                   && op.project_id == das33_project_id_type{2}
+                   && d.head_block_time() > HARDFORK_FIX_PLEDGE_PRICE_START
+                   && d.head_block_time() < HARDFORK_FIX_PLEDGE_PRICE_END))
+    {
+        FC_ASSERT(base.amount >= project_obj.min_pledge, "Can not pledge: must buy at least ${min} tokens", ("min", project_obj.min_pledge));
+    }
+
 
     // Assure that pledge amount is below maximum for current user
     auto previous_pledges = users_total_pledges_in_round(op.account_id, op.project_id, project_obj.phase_number, d);
-    FC_ASSERT( previous_pledges + base.amount <= project_obj.max_pledge,
-              "Can not buy more then ${max} tokens per phase and you already pledged for ${previous} in this phase.",
-              ("max", project_obj.max_pledge)
-              ("previous", previous_pledges));
+    if (op.pledged.asset_id == d.get_dascoin_asset_id()
+            && op.project_id == das33_project_id_type{3}
+            && d.head_block_time() > HARDFORK_FIX_PLEDGE_PRICE_START
+            && d.head_block_time() < HARDFORK_FIX_PLEDGE_PRICE_END)
+    {
+        FC_ASSERT( previous_pledges + base.amount <= 100000000000000,
+                  "Can not buy more then ${max} tokens per phase and you already pledged for ${previous} in this phase.",
+                  ("max", project_obj.max_pledge)
+                  ("previous", previous_pledges));
+    }
+    else
+    {
+        FC_ASSERT( previous_pledges + base.amount <= project_obj.max_pledge,
+                  "Can not buy more then ${max} tokens per phase and you already pledged for ${previous} in this phase.",
+                  ("max", project_obj.max_pledge)
+                  ("previous", previous_pledges));
+    }
 
     // Calculate expected amount with discounts
     auto discount_iterator = project_obj.discounts.find(op.pledged.asset_id);

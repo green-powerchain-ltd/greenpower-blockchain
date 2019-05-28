@@ -397,6 +397,7 @@ int main( int argc, char** argv )
     detail_ns::js_name<operation_result>::name("operation_result");
     detail_ns::js_name<future_extensions>::name("future_extensions");
     detail_ns::js_name<chain_parameters::chain_parameters_extension>::name("chain_parameters_extension");
+    detail_ns::js_name<update_daspay_clearing_parameters_operation::daspay_parameters_extension>::name("daspay_parameters_extension");
     detail_ns::js_name<das33_project_update_operation::das33_project_extension>::name("das33_project_extension");
     detail_ns::js_name<worker_initializer>::name("worker_initializer");
     detail_ns::js_name<predicate>::name("predicate");
