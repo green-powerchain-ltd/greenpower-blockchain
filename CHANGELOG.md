@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+# greenpower-blockchain (GRN) changes
+
+## [1.0.1] - 2019-05-28
+### Added
+ - Price override mechanism for Das33 project and AlliancePay
+ - Hardfork: fix pledge prices for 24h pledge (alliancepay project)
+ - Cli Wallet: new method transfer wallet to vault
+
+### Updated
+ - Fee scheduler evaluators for account update and account whitelist
+ - black list support for transfer vault to wallet and vice versa
+
+## [1.0.0] - 2019-05-13
+### Updated
+ - Set main token name to GRN (token 1.3.2)
+
+# dascoin-blockchain (DAS) changes
+
 ## [2.0.0] - 2019-05-08
 ### Added
  - Hardfork: Web EUR is deprecated
